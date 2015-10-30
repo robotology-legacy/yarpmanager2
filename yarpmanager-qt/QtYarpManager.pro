@@ -24,7 +24,7 @@ win32-msvc2010{
     INCLUDEPATH += $$(YARP_ROOT)/build/generated_include/
     INCLUDEPATH += $$(YARP_ROOT)/src/yarpmanager/libymanager/include
     INCLUDEPATH += $$(YARP_ROOT)/src/libYARP_manager/include
-    INCLUDEPATH += $$(YARP_ROOT)/src/YarpBuilderLib
+    INCLUDEPATH += ../YarpBuilderLib
 
     CONFIG(debug, debug|release) {
         LIBS += -L$$(YARP_ROOT)/build/lib/Debug
