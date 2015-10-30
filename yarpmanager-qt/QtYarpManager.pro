@@ -30,7 +30,7 @@ win32-msvc2010{
         LIBS += -L$$(YARP_ROOT)/build/lib/Debug
         LIBS += -L"$$(ACE_ROOT)/lib"
         LIBS += -L"$$(GSL_DIR)/lib"
-        LIBS += -L$$(YARP_ROOT)/src/build-YarpBuilderLib-Desktop_Qt_5_3_MSVC2010_OpenGL_32bit-Debug/debug
+        LIBS += -L../build-YarpBuilderLib-Desktop_Qt_5_3_MSVC2010_OpenGL_32bit-Debug/debug
 
         LIBS += -lYARP_initd
         LIBS += -lYARP_managerd
@@ -59,7 +59,7 @@ win32-msvc2010{
         LIBS += -L$$(YARP_ROOT)/build/lib/Release
         LIBS += -L"$$(ACE_ROOT)/lib"
         LIBS += -L"$$(GSL_DIR)/lib"
-        LIBS += -LD:/Projects/build-YarpBuilderLib-Desktop_Qt_5_3_MSVC2010_OpenGL_32bit-Release/release
+        LIBS += -L../build-YarpBuilderLib-Desktop_Qt_5_3_MSVC2010_OpenGL_32bit-Release/release
 
         LIBS += -lYARP_math
         LIBS += -lYARP_manager

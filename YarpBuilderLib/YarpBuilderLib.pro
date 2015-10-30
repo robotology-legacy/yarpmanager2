@@ -16,7 +16,7 @@ DEFINES += YARPBUILDERLIB_LIBRARY
     INCLUDEPATH += $$(YARP_ROOT)/build/generated_include/
     INCLUDEPATH += $$(YARP_ROOT)/src/yarpmanager/libymanager/include
     INCLUDEPATH += $$(YARP_ROOT)/src/libYARP_manager/include
-    INCLUDEPATH += $$(YARP_ROOT)/src/yarpmanager-qt
+    INCLUDEPATH += ../yarpmanager-qt
 
 SOURCES += yarpbuilderlib.cpp \
     applicationitem.cpp \
