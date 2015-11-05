@@ -24,10 +24,11 @@ public:
     QRectF boundingRect() const;
     QPointF connectionPoint();
     int type() const ;
-
+    void setAvailable(bool);
     void editingFinished();
 
 private:
+    bool portAvailable;
     bool isInApp;
     QGraphicsProxyWidget *lineEditWidget;
 

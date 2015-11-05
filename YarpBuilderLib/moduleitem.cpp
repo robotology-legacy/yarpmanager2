@@ -87,8 +87,7 @@ void ModuleItem::init()
     if(module->inputCount() > 0){
 
         for(int i=0;i<module->inputCount();i++){
-            InputData in = module->getInputAt(i);
-            iPorts.append(new PortItem(in,this));
+            iPorts.append(new PortItem(&module->getInputAt(i),this));
         }
         prepareGeometryChange();
         boundingR.setX(boundingR.x() - (PORT_LINE_WIDTH + TRIANGLEH / 2.0) );
@@ -110,8 +109,7 @@ void ModuleItem::init()
         //prepareGeometryChange();
         //boundingR.setWidth(mainRect.width() + PORT_LINE_WIDTH);
         for(int i=0;i<module->outputCount();i++){
-            OutputData out = module->getOutputAt(i);
-            oPorts.append(new PortItem(out,this));
+            oPorts.append(new PortItem(&module->getOutputAt(i),this));
         }
         prepareGeometryChange();
         boundingR.setWidth(boundingR.width() +  (PORT_LINE_WIDTH +TRIANGLEH/2.0) );
@@ -241,13 +239,13 @@ void ModuleItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 void ModuleItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
-    setZValue(zValue() + 1);
+    setZValue(zValue() + 10);
     QGraphicsItem::mousePressEvent(event);
     sigHandler->moduleSelected(this);
     if(isInApp && isSelected()){
         parentItem()->setSelected(true);
     }
-
+    QGraphicsItem::mousePressEvent(event);
 }
 
 QPointF ModuleItem::connectionPoint()
@@ -262,6 +260,7 @@ void ModuleItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
     pressed = false;
     moved = false;
+    setZValue(zValue() - 10);
     QGraphicsItem::mouseReleaseEvent(event);
     if(isInApp && isSelected()){
         parentItem()->setSelected(true);
@@ -329,6 +328,7 @@ void ModuleItem::portMoved(PortItem *port,QGraphicsSceneMouseEvent *e)
 PortItem::PortItem(QString portName, int type, BuilderItem *parent) : BuilderItem(parent)
 {
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
+    portAvailable = false;
 
     polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
 
@@ -356,11 +356,14 @@ PortItem::PortItem(QString portName, int type, BuilderItem *parent) : BuilderIte
         allowInputs = false;
         allowOutputs = true;
     }
+
+    itemType = ModulePortItemType;
 }
-PortItem::PortItem(InputData node, BuilderItem *parent) : BuilderItem(parent)
+PortItem::PortItem(InputData *node, BuilderItem *parent) : BuilderItem(parent)
 {
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
     inData = node;
+    portAvailable = false;
 
     polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
 
@@ -370,7 +373,7 @@ PortItem::PortItem(InputData node, BuilderItem *parent) : BuilderItem(parent)
 
     boundingR = QRectF(-triangleH/2, - PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
 
-    this->itemName = node.getPort();
+    this->itemName = node->getPort();
     setToolTip(itemName);
     this->parent = parent;
     portType = INPUT_PORT;
@@ -387,13 +390,14 @@ PortItem::PortItem(InputData node, BuilderItem *parent) : BuilderItem(parent)
         allowInputs = false;
         allowOutputs = true;
     }
+    itemType = ModulePortItemType;
 }
 
-PortItem::PortItem(OutputData node, BuilderItem *parent) : BuilderItem(parent)
+PortItem::PortItem(OutputData* node, BuilderItem *parent) : BuilderItem(parent)
 {
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
     outData = node;
-
+    portAvailable = false;
     polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
 
     setAcceptHoverEvents(true);
@@ -402,7 +406,7 @@ PortItem::PortItem(OutputData node, BuilderItem *parent) : BuilderItem(parent)
 
     boundingR = QRectF(-triangleH/2, - PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
 
-    this->itemName = node.getPort();
+    this->itemName = node->getPort();
     setToolTip(itemName);
     this->parent = parent;
     portType = OUTPUT_PORT;
@@ -419,16 +423,26 @@ PortItem::PortItem(OutputData node, BuilderItem *parent) : BuilderItem(parent)
         allowInputs = false;
         allowOutputs = true;
     }
+    itemType = ModulePortItemType;
 }
 
 void PortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH/2));
-    if(hovered){
-        painter->setBrush(QBrush(QColor(Qt::red)));
+    if(!portAvailable){
+        if(!hovered){
+            painter->setBrush(QBrush(QColor("#F74D4D")));
+        }else{
+            painter->setBrush(QBrush(QColor("#BF0303")));
+        }
     }else{
-        painter->setBrush(QBrush(QColor(Qt::green)));
+        if(!hovered){
+            painter->setBrush(QBrush(QColor("#1CE61C")));
+        }else{
+            painter->setBrush(QBrush(QColor("#008C00")));
+        }
     }
+
     painter->drawPolygon(polygon);
 }
 
@@ -447,7 +461,7 @@ void PortItem::hoverLeaveEvent(QGraphicsSceneHoverEvent * event)
 
 int PortItem::type() const
 {
-    return UserType + (int)ModulePortItemType;
+    return UserType + (int)itemType;
 }
 
 void PortItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -463,11 +477,15 @@ void PortItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     qDebug() << "PORT RELEASED";
     //parent->portReleased(this,event);
     if(!moved && event->modifiers() == Qt::NoModifier && event->button() == Qt::LeftButton){
-        parent->signalHandler()->newConnection(connectionPoint(),this);
+        if(portType == OUTPUT_PORT){
+            parent->signalHandler()->newConnectionRequested(connectionPoint(),this);
+        }else{
+            parent->signalHandler()->newConnectionAdded(connectionPoint(),this);
+        }
     }
     pressed = false;
     moved = false;
-    QGraphicsItem::mouseReleaseEvent(event);
+    //QGraphicsItem::mouseReleaseEvent(event);
 }
 
 void PortItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
@@ -502,12 +520,12 @@ QRectF PortItem::boundingRect() const
 
 InputData *PortItem::getInputData()
 {
-    return &inData;
+    return inData;
 }
 
 OutputData *PortItem::getOutputData()
 {
-    return &outData;
+    return outData;
 }
 
 
@@ -527,3 +545,8 @@ QVariant PortItem::itemChange(GraphicsItemChange change, const QVariant &value)
     return value;
 }
 
+void PortItem::setAvailable(bool available)
+{
+    portAvailable = available;
+    update();
+}

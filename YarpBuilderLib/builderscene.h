@@ -12,11 +12,13 @@ class BuilderScene : public QGraphicsScene
     Q_OBJECT
 public:
     explicit BuilderScene(QObject *parent = 0);
-    void snapToGrid(bool snap);
+
 
 private:
     QGraphicsLineItem *currentLine;
     QPointF startingPoint;
+    QGraphicsItem *startConnectionItem;
+    QGraphicsItem *endConnectionItem;
 
 protected:
     bool snap;
@@ -36,7 +38,9 @@ signals:
     void addNewConnection(void *start, void *end);
 
 public slots:
+    void snapToGrid(bool snap);
     void onNewConnectionRequested(QPointF, QGraphicsItem *item);
+    void onNewConnectionAdded(QPointF, QGraphicsItem *item);
     void onSceneChanged(QList<QRectF> rects);
 
 };

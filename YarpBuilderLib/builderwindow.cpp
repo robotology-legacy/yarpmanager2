@@ -52,14 +52,29 @@ BuilderWindow::BuilderWindow(Application *app, Manager *lazyManager, SafeManager
 
     initApplicationTab();
 
+    builderToolbar.addAction("Zoom In");
+    builderToolbar.addAction("Zoom Out");
+    QAction *restoreZoom = builderToolbar.addAction("Reset Zoom");
+    builderToolbar.addSeparator();
+    builderToolbar.addAction("Show Grid");
+    QAction *snapToGrid = builderToolbar.addAction("Snap to Grid");
+    builderToolbar.addSeparator();
 
-
+    snapToGrid->setCheckable(true);
+    connect(snapToGrid,SIGNAL(triggered(bool)),this,SLOT(onSnap(bool)));
+    connect(restoreZoom,SIGNAL(triggered()),this,SLOT(onRestoreZoom()));
 
 }
 
 BuilderWindow::~BuilderWindow()
 {
     //delete ui;
+}
+
+
+QToolBar *BuilderWindow::getToolBar()
+{
+    return &builderToolbar;
 }
 
 void BuilderWindow::setModuleRunning(bool running, int id)
@@ -74,7 +89,7 @@ void BuilderWindow::setModuleRunning(bool running, int id)
         }
         if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
             ApplicationItem *a = (ApplicationItem *)itemsList.at(i);
-            a->setModuleRunning(id,running);
+            a->setModuleRunning(running,id);
         }
     }
 }
@@ -96,25 +111,113 @@ void BuilderWindow::setConnectionConnected(bool connected, QString from, QString
     }
 }
 
+void BuilderWindow::refresh()
+{
+    Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
+    ModulePContainer modules = safeManager->getKnowledgeBase()->getModules(mainApplication);
+    CnnContainer connections = safeManager->getKnowledgeBase()->getConnections(mainApplication);
+    ApplicaitonPContainer applications = safeManager->getKnowledgeBase()->getApplications(mainApplication);
+    /*************************************/
+    ExecutablePContainer exes = safeManager->getExecutables();
+    ExecutablePIterator moditr;
+
+    //CnnContainer connections = safeManager->getConnections();
+
+    /*************************************/
+
+    QList <int> usedModulesId;
+    ApplicationPIterator appItr;
+    for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
+    {
+        Application* application = (*appItr);
+        bool found = false;
+        for (int i=0; i < itemsList.count();i++) {
+            BuilderItem *sceneItem = (BuilderItem*)itemsList.at(i);
+            if(sceneItem->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *oldAppItem = (ApplicationItem*)sceneItem;
+                if(oldAppItem->getInnerApplication()->getLabel() == application->getLabel()){
+                    found = true;
+                    break;
+                }
+
+            }else{
+                continue;
+            }
+        }
+        if(found){
+            continue;
+        }
+
+        ApplicationItem *appItem = new ApplicationItem(application,safeManager,&usedModulesId);
+        connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+        connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+        scene->addItem(appItem);
+        appItem->init();
+        appItem->setZValue(0);
+        appItem->setPos(application->getModelBase().points[0].x,
+                        application->getModelBase().points[0].y);
+
+        itemsList.append(appItem);
+    }
+
+    /******************************************************/
+
+    ModulePIterator itr;
+    for(itr=modules.begin(); itr!=modules.end(); itr++){
+        Module* module = (*itr);
+        QString modLabel = module->getLabel();
+
+        bool found = false;
+        for (int i=0; i < itemsList.count();i++) {
+            BuilderItem *sceneItem = (BuilderItem*)itemsList.at(i);
+            if(sceneItem->type() == QGraphicsItem::UserType + ModuleItemType){
+                ModuleItem *oldModItem = (ModuleItem*)sceneItem;
+                if(oldModItem->getInnerModule()->getLabel() == module->getLabel()){
+                    found = true;
+                    break;
+                }
+
+            }else{
+                continue;
+            }
+        }
+        if(found){
+            continue;
+        }
+
+
+        QString moduleId;
+        for(moditr=exes.begin(); moditr<exes.end(); moditr++){
+            QString label = QString("%1").arg((*moditr)->getModule()->getLabel());
+            QString id = QString("%1").arg((*moditr)->getID());
+
+            if(modLabel == label){
+
+                bool idFound = false;
+                foreach (int usedId, usedModulesId) {
+                    if(usedId == id.toInt()){
+                        idFound = true;
+                    }
+                }
+                if(!idFound){
+                    usedModulesId.append(id.toInt());
+                    moduleId = id;
+                    break;
+                }
+              }
+        }
+        addModule(module,moduleId.toInt());
+    }
+
+    /*************************************************************/
+
+
+
+}
+
 void BuilderWindow::init(bool refresh)
 {
     index = 0;
-
-//    KnowledgeBase* lazy_kb = lazyManager->getKnowledgeBase();
-
-
-//        ModulePContainer mods =  lazy_kb->getModules();
-//        for(ModulePIterator itr=mods.begin(); itr!=mods.end(); itr++)
-//            safeManager->getKnowledgeBase()->addModule((*itr));
-
-//        ResourcePContainer res =  lazy_kb->getResources();
-//        for(ResourcePIterator itr=res.begin(); itr!=res.end(); itr++)
-//            safeManager->getKnowledgeBase()->addResource((*itr));
-
-
-//        ApplicaitonPContainer apps =  lazy_kb->getApplications();
-//        for(ApplicationPIterator itr=apps.begin(); itr!=apps.end(); itr++)
-//            safeManager->getKnowledgeBase()->addApplication((*itr));
 
 
     bool ret = true;//safeManager->loadApplication(app->getName());
@@ -126,17 +229,19 @@ void BuilderWindow::init(bool refresh)
         ApplicaitonPContainer applications = safeManager->getKnowledgeBase()->getApplications(mainApplication);
         /*************************************/
         ExecutablePContainer exes = safeManager->getExecutables();
-        yarp::manager::ExecutablePIterator moditr;
+        ExecutablePIterator moditr;
 
         //CnnContainer connections = safeManager->getConnections();
 
         /*************************************/
 
+        QList <int> usedModulesId;
+
         ApplicationPIterator appItr;
         for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
         {
             Application* application = (*appItr);
-            ApplicationItem *appItem = new ApplicationItem(application,lazyManager,safeManager);
+            ApplicationItem *appItem = new ApplicationItem(application,safeManager,&usedModulesId);
             connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
             connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
             scene->addItem(appItem);
@@ -151,45 +256,55 @@ void BuilderWindow::init(bool refresh)
                 index += 300;
             }
             itemsList.append(appItem);
+
         }
 
-        ModulePIterator itr;
-        QList <int> usedModulesId;
-        for(itr=modules.begin(); itr!=modules.end(); itr++){
-            Module* module = (*itr);
-            QString moduleId;
-            for(moditr=exes.begin(); moditr<exes.end(); moditr++){
-                QString id = QString("%1").arg((*moditr)->getID());
-                QString command = QString("%1").arg((*moditr)->getCommand());
-                QString host = QString("%1").arg((*moditr)->getHost());
-                QString param = QString("%1").arg((*moditr)->getParam());
-                QString stdio = QString("%1").arg((*moditr)->getStdio());
-                QString workDir = QString("%1").arg((*moditr)->getWorkDir());
 
-                if(!strcmp(module->getParam(),param.toLatin1().data()) &&
-                   !strcmp(module->getHost(),host.toLatin1().data()) &&
-                   !strcmp(module->getStdio(),stdio.toLatin1().data()) &&
-                   !strcmp(module->getWorkDir(),workDir.toLatin1().data()) &&
-                   !strcmp(module->getName(),command.toLatin1().data())){
-
-                    bool idFound = false;
-                    foreach (int usedId, usedModulesId) {
-                        if(usedId == id.toInt()){
-                            idFound = true;
-                        }
-                    }
-                    if(!idFound){
-                        usedModulesId.append(id.toInt());
-                        moduleId = id;
-                        break;
-                    }
-
-                    }
+        for(moditr=exes.begin(); moditr<exes.end(); moditr++){
+            Module* module = (*moditr)->getModule();
+            QString id = QString("%1").arg((*moditr)->getID());
+            bool idFound = false;
+            foreach (int usedId, usedModulesId) {
+                if(usedId == id.toInt()){
+                    idFound = true;
+                    break;
+                }
             }
-
-
-            addModule(module,moduleId.toInt());
+            if(!idFound){
+                usedModulesId.append(id.toInt());
+                addModule(module,id.toInt());
+            }
         }
+
+
+
+//        ModulePIterator itr;
+//        for(itr=modules.begin(); itr!=modules.end(); itr++){
+//            Module* module = (*itr);
+//            QString modLabel = QString("%1").arg(module->getLabel());
+//            QString moduleId;
+//            for(moditr=exes.begin(); moditr<exes.end(); moditr++){
+//                QString label = QString("%1").arg((*moditr)->getModule()->getLabel());
+//                QString id = QString("%1").arg((*moditr)->getID());
+
+//                if(modLabel == label){
+
+//                    bool idFound = false;
+//                    foreach (int usedId, usedModulesId) {
+//                        if(usedId == id.toInt()){
+//                            idFound = true;
+//                        }
+//                    }
+//                    if(!idFound){
+//                        usedModulesId.append(id.toInt());
+//                        moduleId = id;
+//                        break;
+//                    }
+//                  }
+//            }
+//            addModule(module,moduleId.toInt());
+//        }
+
         index = (index/900)*100+50;
         CnnIterator citr;
         ModulePContainer allModules = safeManager->getKnowledgeBase()->getSelModules();
@@ -229,6 +344,7 @@ void BuilderWindow::init(bool refresh)
                 if(!bExist){
                     sourcePort = new SourcePortItem((*citr).from());
                     connect(sourcePort->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
+                    connect(sourcePort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
                     itemsList.append(sourcePort);
                     scene->addItem(sourcePort);
                     source = sourcePort;
@@ -264,7 +380,7 @@ void BuilderWindow::init(bool refresh)
                     }
                 }
                 if(!bExist){
-                    destPort = new DestinationPortItem((*citr).to());
+                    destPort = new DestinationPortItem((*citr).to(),app->getPrefix());
                     itemsList.append(destPort);
                     dest = destPort;
 
@@ -293,7 +409,7 @@ void BuilderWindow::init(bool refresh)
                     source->addArrow(arrow);
                     dest->addArrow(arrow);
                     scene->addItem(arrow);
-                    arrow->setZValue(-1000.0);
+                    arrow->setZValue(1);
                     arrow->updatePosition();
                     itemsList.append(arrow);
                 }
@@ -349,8 +465,10 @@ BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
     ModuleItem *it = new ModuleItem(module,moduleId);
     connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
+    connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
     itemsList.append(it);
     scene->addItem(it);
+    it->setZValue(2);
     if(module->getModelBase().points.size()>0){
         it->setPos(module->getModelBase().points[0].x + it->boundingRect().width()/2,
                 module->getModelBase().points[0].y + it->boundingRect().height()/2);
@@ -380,26 +498,20 @@ void BuilderWindow::onAddedModule(void *mod,QPointF pos)
         string strPrefix = string("/") + module->getLabel();
         module->setBasePrefix(strPrefix.c_str());
         string strAppPrefix = safeManager->getKnowledgeBase()->getApplication()->getBasePrefix();
-        safeManager->getKnowledgeBase()->setModulePrefix(module, (strAppPrefix+module->getBasePrefix()).c_str(), false);
-
+        string prefix = strAppPrefix+module->getBasePrefix();
+        safeManager->getKnowledgeBase()->setModulePrefix(module, prefix.c_str(), false);
 
         safeManager->getKnowledgeBase()->removeApplication(mainApplication);
         safeManager->getKnowledgeBase()->addApplication(mainApplication);
 
 
 
-//        ModuleItem *it = new ModuleItem(module,-1);
-//        connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-//        connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
-//        itemsList.append(it);
-//        scene->addItem(it);
-//        it->setPos(pos);
-
-        itemsList.clear();
-        scene->clear();
+//        itemsList.clear();
+//        scene->clear();
 
 
         refreshApplication();
+        //refresh();
         init(true);
     }
 
@@ -583,8 +695,9 @@ PortItem* BuilderWindow::findModelFromOutput(OutputData* output,QString modulePr
                     ModuleItem *module = (ModuleItem*)application->getModulesList()->at(j);
                     for(int k=0;k<module->oPorts.count();k++){
                         PortItem *port = module->oPorts.at(k);
-                        QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getPrefix());
-                        if(!strcmp(port->outData.getPort(), (*output).getPort()) && modulePrefix == prefix)  {
+                        //QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getBasePrefix());
+                        //if(!strcmp(port->outData.getPort(), (*output).getPort()) && modulePrefix == prefix)  {
+                        if(port->outData == output){
                             return port;
                         }
                     }
@@ -597,7 +710,8 @@ PortItem* BuilderWindow::findModelFromOutput(OutputData* output,QString modulePr
             ModuleItem *module = (ModuleItem*)it;
             for(int k=0;k<module->oPorts.count();k++){
                 PortItem *port = module->oPorts.at(k);
-                if(!strcmp(port->outData.getPort(), (*output).getPort()) && modulePrefix == QString("%1").arg(module->getInnerModule()->getPrefix()))  {
+                //if(!strcmp(port->outData.getPort(), (*output).getPort()) && modulePrefix == QString("%1").arg(module->getInnerModule()->getPrefix()))  {
+                if(port->outData == output){
                     return port;
                 }
             }
@@ -622,8 +736,9 @@ PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePref
                     ModuleItem *module = (ModuleItem*)application->getModulesList()->at(j);
                     for(int k=0;k<module->iPorts.count();k++){
                         PortItem *port = module->iPorts.at(k);
-                        QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getPrefix());
-                        if(!strcmp(port->inData.getPort(),(*input).getPort()) && modulePrefix == prefix)  {
+                        //QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getBasePrefix());
+                        //if(!strcmp(port->inData.getPort(),(*input).getPort()) && modulePrefix == prefix)  {
+                        if(port->inData == input){
                             return port;
                         }
                     }
@@ -636,7 +751,8 @@ PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePref
             ModuleItem *module = (ModuleItem*)it;
             for(int k=0;k<module->iPorts.count();k++){
                 PortItem *port = module->iPorts.at(k);
-                if(!strcmp(port->inData.getPort(),(*input).getPort()) && modulePrefix == QString("%1").arg(module->getInnerModule()->getPrefix())){
+                //if(!strcmp(port->inData.getPort(),(*input).getPort()) && modulePrefix == QString("%1").arg(module->getInnerModule()->getPrefix())){
+                if(port->inData == input){
                     return port;
                 }
             }
@@ -646,4 +762,91 @@ PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePref
 
 
     return NULL;
+}
+
+
+void BuilderWindow::setSelectedModules(QList<int>selectedIds)
+{
+    foreach (QGraphicsItem *it, itemsList) {
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)it;
+            if(selectedIds.contains(mod->getId())){
+                mod->setSelected(true);
+            }else{
+                mod->setSelected(false);
+            }
+        }else
+            if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *app = (ApplicationItem*)it;
+                app->setSelectedModules(selectedIds);
+            }
+    }
+}
+
+void BuilderWindow::setOutputPortAvailable(QString oData, bool available)
+{
+    foreach (QGraphicsItem *it, itemsList) {
+        BuilderItem *item = (BuilderItem *)it;
+        if(item->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)item;
+
+            foreach (PortItem *oPort, mod->oPorts) {
+                QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(oPort->outData->getPort());
+
+                if(strPort == oData ){
+                    oPort->setAvailable(available);
+                }
+            }
+
+
+        }else
+        if(item->type() == QGraphicsItem::UserType + ApplicationItemType){
+            ApplicationItem *app = (ApplicationItem*)item;
+            app->setOutputPortAvailable(oData, available);
+        }else
+            if(item->type() == QGraphicsItem::UserType + SourcePortItemType){
+                SourcePortItem *source = (SourcePortItem*)item;
+
+                QString strPort = QString("%1").arg(source->getItemName());
+                if(strPort == oData){
+                    source->setAvailable(available);
+                }
+
+            }
+    }
+}
+
+void BuilderWindow::setInputPortAvailable(QString iData, bool available)
+{
+
+
+    foreach (QGraphicsItem *it, itemsList) {
+        BuilderItem *item = (BuilderItem *)it;
+        if(item->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)item;
+
+            foreach (PortItem *iPort, mod->iPorts) {
+                QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(iPort->inData->getPort());
+                if(strPort == iData){
+                    iPort->setAvailable(available);
+                }
+            }
+
+
+        }else
+            if(item->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *app = (ApplicationItem*)item;
+                app->setInputPortAvailable(iData,available);
+            }
+            else{
+                if(item->type() == QGraphicsItem::UserType + DestinationPortItemType){
+                    DestinationPortItem *dest = (DestinationPortItem*)item;
+
+                    QString strPort = QString("%1").arg(dest->getItemName());
+                    if(strPort == iData){
+                        dest->setAvailable(available);
+                    }
+                }
+            }
+    }
 }

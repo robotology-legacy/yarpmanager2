@@ -6,7 +6,7 @@
 class ApplicationItem : public BuilderItem
 {
 public:
-    ApplicationItem(Application* application, Manager *lazyManager/*,Manager *manager*/, Manager *manager, BuilderItem *parent = 0);
+    ApplicationItem(Application* application, Manager *manager, QList <int> *, bool isInApp = false, BuilderItem *parent = NULL);
     ~ApplicationItem();
 
     QRectF boundingRect() const;
@@ -15,16 +15,19 @@ public:
     void init();
     QList<QGraphicsItem *> *getModulesList();
     Application* getInnerApplication();
-    void setModuleRunning(int,bool);
+    void setModuleRunning(bool,int);
     void setConnectionConnected(bool connected, QString from, QString to);
+    void setSelectedModules(QList<int>selectedIds);
+    void setOutputPortAvailable(QString oData, bool available);
+    void setInputPortAvailable(QString iData, bool available);
 
 private:
     void updateBoundingRect();
     void updateSizes(BuilderItem *it);
     void findInputOutputData(Connection& cnn,  ModulePContainer &modules,
-                             InputData* &input_, OutputData* &output_, QString *inModulePrefix, QString *outModulePrefix);
-    PortItem* findModelFromOutput(OutputData* output, QString modulePrefix);
-    PortItem* findModelFromInput(InputData* input, QString modulePrefix);
+                             InputData* &input_, OutputData* &output_);
+    PortItem* findModelFromOutput(OutputData* output);
+    PortItem* findModelFromInput(InputData* input);
 
     BuilderItem* addModule(Module *module, int moduleId);
     qreal minx,miny,maxw,maxh;
@@ -40,11 +43,11 @@ protected:
 
 
 private:
+    bool isInApp;
+    QList <int> *usedModulesId;
     QFont customFont;
     int textWidth ;
     Application* application;
-    Manager *lazyManager;
-    Manager manager;
     Manager *mainAppManager;
     int index;
     QList <QGraphicsItem*> itemsList;

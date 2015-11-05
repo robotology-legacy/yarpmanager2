@@ -97,7 +97,6 @@ protected:
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event);
     //void mousePressEvent(QGraphicsSceneMouseEvent *event);
 private:
-    ItemType itemType;
     bool connected;
     yarp::manager::Connection connection;
     BuilderItem *myStartItem;

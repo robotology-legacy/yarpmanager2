@@ -13,6 +13,7 @@ BuilderScene::BuilderScene(QObject *parent) :
     QGraphicsScene(parent)
 {
     currentLine = NULL;
+    startConnectionItem = NULL;
     //connect(this,SIGNAL(changed(QList<QRectF>)),this,SLOT(onSceneChanged(QList<QRectF>)));
     snap = false;
 }
@@ -78,48 +79,67 @@ void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 void BuilderScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
 
-    if(currentLine){
-        QList<QGraphicsItem *> startItems = items(currentLine->line().p1());
-        if (startItems.count() && startItems.first() == currentLine)
-            startItems.removeFirst();
-        QList<QGraphicsItem *> endItems = items(currentLine->line().p2());
-        if (endItems.count() && endItems.first() == currentLine)
-            endItems.removeFirst();
+//    if(currentLine){
+//        QList<QGraphicsItem *> startItems = items(currentLine->line().p1());
+//        if (startItems.count() && startItems.first() == currentLine)
+//            startItems.removeFirst();
+//        QList<QGraphicsItem *> endItems = items(currentLine->line().p2());
+//        if (endItems.count() && endItems.first() == currentLine)
+//            endItems.removeFirst();
 
-        removeItem(currentLine);
-        delete currentLine;
-        currentLine = NULL;
+//        removeItem(currentLine);
+//        delete currentLine;
+//        currentLine = NULL;
 
-         if (startItems.count() <= 0 || endItems.count() <= 0){
-             return;
-         }
+//         if (startItems.count() <= 0 || endItems.count() <= 0){
+//             return;
+//         }
 
-         QGraphicsItem *startItem = startItems.first();
-         QGraphicsItem *endItem = endItems.first();
+//         for(int i=startItems.count() - 1; i >= 0; i--){
+//             BuilderItem *it = ((BuilderItem*)startItems.at(i));
+//             if(it->type() != (QGraphicsItem::UserType + (int)ModulePortItemType) &&
+//                 it->type() != (QGraphicsItem::UserType + (int)SourcePortItemType)){
+//                 startItems.removeAt(i);
+//            }
+//         }
+//         for(int i=endItems.count() - 1; i >= 0; i--){
+//             BuilderItem *it = ((BuilderItem*)endItems.at(i));
+//             if(it->type() !=(QGraphicsItem::UserType + (int)ModulePortItemType) &&
+//                 it->type() != (QGraphicsItem::UserType + (int)DestinationPortItemType)){
+//                 endItems.removeAt(i);
+//            }
+//         }
 
-         if(startItem->type() == QGraphicsItem::UserType + (int)ModuleItemType || endItem->type() == QGraphicsItem::UserType + (int)ModuleItemType){
-             return;
-         }
+//         if (startItems.count() <= 0 || endItems.count() <= 0){
+//             return;
+//         }
+
+//         BuilderItem *startItem = (BuilderItem*)startItems.first();
+//         BuilderItem *endItem = (BuilderItem*)endItems.first();
+
+//         if(startItem->type() == QGraphicsItem::UserType + (int)ModuleItemType || endItem->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+//             return;
+//         }
 
 
 
-        if (((BuilderItem*)startItem)->allowOutputConnections() &&
-            ((BuilderItem*)endItem)->allowInputConnections()) {
+//        if (startItem->allowOutputConnections() &&
+//            endItem->allowInputConnections()) {
 
-            //qDebug() << endItems.first()->type();
-
-
-            BuilderItem *startItem = qgraphicsitem_cast<BuilderItem *>(startItems.first());
-            BuilderItem *endItem = qgraphicsitem_cast<BuilderItem *>(endItems.first());
-            if(!startItem->arrowAlreadyPresent(endItem)){
-                addNewConnection(startItem,endItem);
-
-            }
+//            //qDebug() << endItems.first()->type();
 
 
+////            BuilderItem *startItem = qgraphicsitem_cast<BuilderItem *>(startItems.first());
+////            BuilderItem *endItem = qgraphicsitem_cast<BuilderItem *>(endItems.first());
+//            if(!startItem->arrowAlreadyPresent(endItem)){
+//                addNewConnection(startItem,endItem);
 
-        }
-    }
+//            }
+
+
+
+//        }
+//    }
     QGraphicsScene::mousePressEvent(event);
 }
 
@@ -155,14 +175,50 @@ void BuilderScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 void BuilderScene::onNewConnectionRequested(QPointF p,QGraphicsItem *item)
 {
+
+    startConnectionItem = NULL;
     if(!((BuilderItem*)item)->allowOutputConnections()){
         return;
     }
-
+    startConnectionItem = item;
     startingPoint = item->mapToScene(p);
     if(!currentLine){
         currentLine = new QGraphicsLineItem();
         addItem(currentLine);
+
+
+    }
+
+
+
+}
+
+void BuilderScene::onNewConnectionAdded(QPointF p,QGraphicsItem *item)
+{
+    if(startConnectionItem){
+        if(currentLine){
+            removeItem(currentLine);
+            delete currentLine;
+            currentLine = NULL;
+
+            BuilderItem *startItem = (BuilderItem*)startConnectionItem;
+            BuilderItem *endItem = (BuilderItem*)item;
+
+            if(startItem->type() == QGraphicsItem::UserType + (int)ModuleItemType || endItem->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+                return;
+            }
+
+
+
+           if (startItem->allowOutputConnections() &&
+               endItem->allowInputConnections()) {
+               if(!startItem->arrowAlreadyPresent(endItem)){
+                   addNewConnection(startItem,endItem);
+
+               }
+           }
+        }
+        startConnectionItem = NULL;
     }
 
 }

@@ -14,9 +14,14 @@ ItemSignalHandler::ItemSignalHandler(QGraphicsItem *it,ItemType type,QObject *pa
     this->type = type;
 }
 
-void ItemSignalHandler::newConnection(QPointF p, QGraphicsItem *it)
+void ItemSignalHandler::newConnectionRequested(QPointF p, QGraphicsItem *it)
 {
     requestNewConnection(p,it);
+}
+
+void ItemSignalHandler::newConnectionAdded(QPointF p, QGraphicsItem *it)
+{
+    addNewConnection(p,it);
 }
 
 

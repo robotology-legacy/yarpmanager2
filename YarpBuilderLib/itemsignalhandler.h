@@ -15,13 +15,15 @@ class ItemSignalHandler : public QObject
 public:
     ItemSignalHandler(QObject *parent = NULL);
     ItemSignalHandler(QGraphicsItem *it, ItemType type, QObject *parent = NULL);
-    void newConnection(QPointF, QGraphicsItem *it);
+    void newConnectionRequested(QPointF, QGraphicsItem *it);
+    void newConnectionAdded(QPointF, QGraphicsItem *it);
 
 private:
        QGraphicsItem *parentItem;
        ItemType type;
 
 signals:
+    void addNewConnection(QPointF,QGraphicsItem *it);
     void requestNewConnection(QPointF,QGraphicsItem *it);
     void moduleSelected(QGraphicsItem *it);
     void applicationSelected(QGraphicsItem *it);

@@ -10,7 +10,7 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, Builder
 {
     itemType = DestinationPortItemType;
     this->itemName = itemName;
-
+    portAvailable = false;
     sigHandler = new ItemSignalHandler((QGraphicsItem*)this,DestinationPortItemType,NULL);
     pressed = false;
     moved = false;
@@ -60,7 +60,6 @@ DestinationPortItem::~DestinationPortItem()
 }
 
 
-
 int DestinationPortItem::type() const
 {
     return (int)(UserType + (int)itemType);
@@ -68,10 +67,16 @@ int DestinationPortItem::type() const
 void DestinationPortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
 
-    if(!isInApp){
-        painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
+    QBrush availableBrush;
+    if(!portAvailable){
+        availableBrush = QBrush(QColor("#BF0303"));
     }else{
-        painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH,Qt::DashLine));
+        availableBrush = QBrush(QColor("#00E400"));
+    }
+    if(!isInApp){
+        painter->setPen(QPen(availableBrush,BORDERWIDTH));
+    }else{
+        painter->setPen(QPen(availableBrush,BORDERWIDTH,Qt::DashLine));
     }
     QPainterPath path;
     path.moveTo(mainRect.x(),mainRect.y());
@@ -153,7 +158,7 @@ void DestinationPortItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 void DestinationPortItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
-    setZValue(zValue() + 1);
+    setZValue(zValue() + 10);
     editingFinished();
     QGraphicsItem::mousePressEvent(event);
 }
@@ -170,6 +175,7 @@ void DestinationPortItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
     pressed = false;
     moved = false;
+    setZValue(zValue() - 10);
     QGraphicsItem::mouseReleaseEvent(event);
 }
 
@@ -189,5 +195,11 @@ QVariant DestinationPortItem::itemChange(GraphicsItemChange change, const QVaria
     }
 
     return value;
+}
+
+void DestinationPortItem::setAvailable(bool available)
+{
+    portAvailable = available;
+    update();
 }
 

@@ -19,6 +19,7 @@
 #include <yarp/manager/manager.h>
 #include "safe_manager.h"
 
+#include <QToolBar>
 
 //namespace BuilderUi {
 //class BuilderWindow;
@@ -35,9 +36,16 @@ public:
     void setConnectionConnected(bool, QString from, QString to);
 
     void init(bool refresh = false);
+    void refresh();
+
+    void setSelectedModules(QList<int>selectedIds);
 
     //BuilderItem* addModule(QString itemName, QStringList inputPorts, QStringList outputPorts , QPointF pos, BuilderItem * parent = 0);
     BuilderItem* addModule(Module *module, int moduleId);
+    void setOutputPortAvailable(QString, bool);
+    void setInputPortAvailable(QString, bool);
+
+    QToolBar *getToolBar();
 
 private:
 
@@ -49,6 +57,7 @@ private:
 
 private:
     //BuilderUi::BuilderWindow *ui;
+    QToolBar builderToolbar;
     BuilderScene *scene;
     QTabWidget *propertiesTab;
     QTreeWidget *appProperties;
@@ -66,8 +75,8 @@ signals:
     void refreshApplication();
 
 private slots:
-    void onSnap(bool);
     void onRestoreZoom();
+    void onSnap(bool);
     void onModuleSelected(QGraphicsItem *it);
     void onApplicationSelected(QGraphicsItem* it);
     void initApplicationTab(ApplicationItem *application = NULL);
@@ -292,7 +301,7 @@ private:
 
                     switch (endItem->type()) {
                     case QGraphicsItem::UserType + (int)DestinationPortItemType:
-                        copiedEndItem = new DestinationPortItem("DestinationPort_Copia");
+                        //copiedEndItem = new DestinationPortItem("DestinationPort_Copia");
                         break;
 
                     default:
@@ -351,7 +360,7 @@ private:
                 it = new SourcePortItem("SourcePort_Copia");
                 break;
             case QGraphicsItem::UserType + (int)DestinationPortItemType:
-                it = new DestinationPortItem("DestinationPort_Copia");
+                //it = new DestinationPortItem("DestinationPort_Copia");
                 break;
             case QGraphicsItem::UserType + (int)ModuleItemType:
                // it = new ModuleItem("Modulo_Copia",QStringList() << "input1" << "input2" ,QStringList() << "output1");

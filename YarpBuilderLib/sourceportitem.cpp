@@ -10,6 +10,7 @@ SourcePortItem::SourcePortItem(QString itemName, bool isInApp, BuilderItem *pare
 {
     itemType = SourcePortItemType;
     this->itemName = itemName;
+    portAvailable = false;
 
     sigHandler = new ItemSignalHandler((QGraphicsItem*)this,SourcePortItemType,NULL);
     pressed = false;
@@ -68,11 +69,18 @@ int SourcePortItem::type() const
 void SourcePortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
 
-    if(!isInApp){
-        painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
+    QBrush availableBrush;
+    if(!portAvailable){
+        availableBrush = QBrush(QColor("#BF0303"));
     }else{
-        painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH,Qt::DashLine));
+        availableBrush = QBrush(QColor("#00E400"));
     }
+    if(!isInApp){
+        painter->setPen(QPen(availableBrush,BORDERWIDTH));
+    }else{
+        painter->setPen(QPen(availableBrush,BORDERWIDTH,Qt::DashLine));
+    }
+
     QPainterPath path;
     path.moveTo(mainRect.x(),mainRect.y());
     path.lineTo(mainRect.x() + mainRect.width() - 10, mainRect.y());
@@ -142,7 +150,7 @@ void SourcePortItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 void SourcePortItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
-    setZValue(zValue() + 1);
+    setZValue(zValue() + 10);
     editingFinished();
     QGraphicsItem::mousePressEvent(event);
 }
@@ -157,8 +165,9 @@ QPointF SourcePortItem::connectionPoint()
 void SourcePortItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     if(!moved && event->modifiers() == Qt::NoModifier && event->button() == Qt::LeftButton && !lineEditWidget->isVisible()){
-        sigHandler->newConnection(connectionPoint(),this);
+        sigHandler->newConnectionRequested(connectionPoint(),this);
     }
+    setZValue(zValue() - 10);
     pressed = false;
     moved = false;
     QGraphicsItem::mouseReleaseEvent(event);
@@ -187,4 +196,10 @@ QVariant SourcePortItem::itemChange(GraphicsItemChange change, const QVariant &v
 
     return value;
 }
+void SourcePortItem::setAvailable(bool available)
+{
+    portAvailable = available;
+    update();
+}
+
 

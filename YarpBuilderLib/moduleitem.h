@@ -82,17 +82,18 @@ class PortItem : public BuilderItem
 
 public:
     PortItem(QString portName, int type, BuilderItem *parent = 0);
-    PortItem(InputData, BuilderItem *parent = 0);
-    PortItem(OutputData, BuilderItem *parent = 0);
+    PortItem(InputData*, BuilderItem *parent = 0);
+    PortItem(OutputData*, BuilderItem *parent = 0);
     QRectF boundingRect() const;
     QPointF connectionPoint();
     int type() const ;
     int getPortType();
     InputData *getInputData();
     OutputData *getOutputData();
+    void setAvailable(bool);
 
-    OutputData outData;
-    InputData inData;
+    OutputData *outData;
+    InputData *inData;
 protected:
     void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
     void hoverEnterEvent(QGraphicsSceneHoverEvent * event);
@@ -103,7 +104,7 @@ protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 private:
-
+    bool portAvailable;
     BuilderItem *parent;
     QPolygonF polygon;
     int portType;
