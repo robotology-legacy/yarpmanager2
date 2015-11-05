@@ -83,6 +83,7 @@ private:
     QMainWindow *builderWindowContainer;
     QDockWidget *builderWidget;
     BuilderWindow *builder;
+    QToolBar *builderToolBar;
 
     Ui::ApplicationViewWidget *ui;
     SafeManager safeManager;
@@ -152,6 +153,7 @@ private slots:
     void onSelfStop(int which);
 
     void onRefreshApplication();
+    //void onBuilderFloatingChanged(bool);
 
 signals:
     void logWarning(QString);

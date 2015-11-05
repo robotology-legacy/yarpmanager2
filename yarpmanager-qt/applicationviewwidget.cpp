@@ -92,8 +92,12 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,yar
     builderWidget->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     builder->init();
 
+    builderToolBar = builder->getToolBar();
+    builderWindowContainer->addToolBar(Qt::TopToolBarArea,builderToolBar);
+
     connect(builder,SIGNAL(refreshApplication()),
             this,SLOT(onRefreshApplication()),Qt::DirectConnection);
+    //connect(builderWidget,SIGNAL(topLevelChanged(bool)),this,SLOT(onBuilderFloatingChanged(bool)));
 
 
 
@@ -103,6 +107,15 @@ ApplicationViewWidget::~ApplicationViewWidget()
 {
     delete ui;
 }
+
+//void ApplicationViewWidget::onBuilderFloatingChanged(bool floating)
+//{
+//    if(floating){
+
+//    }else{
+//        builderWindowContainer->removeToolBar(builderToolBar);
+//    }
+//}
 
 /*! \brief Create the context menu for the modules tree. */
 void ApplicationViewWidget::createModulesViewContextMenu()
@@ -252,6 +265,15 @@ void ApplicationViewWidget::onModuleItemSelectionChanged()
         }
         modAssignAction->setEnabled(true);
         modRefreshAction->setEnabled(true);
+
+        QList<int>selectedIds;
+        QList<QTreeWidgetItem*> selectedItems = ui->moduleList->selectedItems();
+        foreach(QTreeWidgetItem *it,selectedItems){
+            QString id = it->text(1);
+            selectedIds.append(id.toInt());
+        }
+
+        builder->setSelectedModules(selectedIds);
     }
 }
 
@@ -1374,12 +1396,14 @@ void ApplicationViewWidget::onConAvailable(int from, int to)
         int row;
         if(getConRowByID(from, &row))
             ui->connectionList->topLevelItem(row)->setTextColor(3,QColor("#008C00"));
+            builder->setOutputPortAvailable(ui->connectionList->topLevelItem(row)->text(3),true);
     }
 
     if(to >= 0){
         int row;
         if(getConRowByID(to, &row))
             ui->connectionList->topLevelItem(row)->setTextColor(4,QColor("#008C00"));
+            builder->setInputPortAvailable(ui->connectionList->topLevelItem(row)->text(4),true);
     }
     reportErrors();
 }
@@ -1391,14 +1415,18 @@ void ApplicationViewWidget::onConUnAvailable(int from, int to)
 {
     if(from >= 0){
         int row;
-        if(getConRowByID(from, &row))
+        if(getConRowByID(from, &row)){
             ui->connectionList->topLevelItem(row)->setTextColor(3,QColor("#BF0303"));
+            builder->setOutputPortAvailable(ui->connectionList->topLevelItem(row)->text(3),false);
+        }
     }
 
     if(to >= 0){
         int row;
-        if(getConRowByID(to, &row))
+        if(getConRowByID(to, &row)){
             ui->connectionList->topLevelItem(row)->setTextColor(4,QColor("#BF0303"));
+            builder->setInputPortAvailable(ui->connectionList->topLevelItem(row)->text(4),false);
+        }
     }
     reportErrors();
 }
