@@ -35,7 +35,7 @@ public:
     QPointF connectionPoint();
     int getId();
     void setRunning(bool);
-
+    void setModuleSelected(bool selected);
 
     int type() const ;
 
@@ -51,12 +51,14 @@ private:
 
 
 private:
+    bool externalSelection;
     bool isInApp;
     int moduleId;
     Module *module;
     QStringList inputPorts;
     QStringList outputPorts;
     bool running;
+
 
 
 
@@ -72,7 +74,7 @@ protected:
     void portMoved(PortItem *port, QGraphicsSceneMouseEvent *e);
 
 signals:
-    void moduleSelected();
+    //void moduleSelected(int);
 
 };
 

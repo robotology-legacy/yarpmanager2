@@ -51,10 +51,10 @@
 
 const qreal Pi = 3.14;
 
-Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, BuilderItem *parent)
+Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp,BuilderItem *parent)
     : BuilderItem(parent)
 {
-
+    sigHandler = new ItemSignalHandler();
     myStartItem = startItem;
     myEndItem = endItem;
     connected = false;
@@ -65,6 +65,7 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
     myColor = Qt::black;
     this->textLbl = NULL;
     QString label;
+    this->isInApp = isInApp;
 
 
     firstTime = true;
@@ -136,9 +137,10 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
 
 }
 
-Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int id,BuilderItem *parent)
+Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int id, bool isInApp,BuilderItem *parent)
     : BuilderItem(parent)
 {
+    sigHandler = new ItemSignalHandler();
     itemType = ConnectionItemType;
     connected = false;
     myStartItem = startItem;
@@ -151,11 +153,13 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int 
     this->textLbl = NULL;
     this->connection = conn;
     this->id = id;
+    this->isInApp = isInApp;
     QString label = conn.carrier();
     if(!label.isEmpty()){
         textLbl = new Label(label,this);
         qDebug() << textLbl->type();
     }
+    externalSelection = false;
 
     firstTime = true;
 
@@ -190,6 +194,11 @@ Arrow::~Arrow()
     }
 
     scene()->removeItem(this);
+}
+void Arrow::setConnectionSelected(bool selected)
+{
+    externalSelection = true;
+    setSelected(selected);
 }
 
 QPointF Arrow::connectionPoint()
@@ -345,10 +354,12 @@ void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 
 void Arrow::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
-    QPointF clickPos = event->pos();
-    addHandle(clickPos);
+    if(!isInApp){
+        QPointF clickPos = event->pos();
+        addHandle(clickPos);
 
-    updatePosition();
+        updatePosition();
+    }
 
     QGraphicsItem::mouseDoubleClickEvent(event);
 }
@@ -383,6 +394,27 @@ void Arrow::removeHandle(LineHandle *handle)
 QList <LineHandle*> Arrow::handles()
 {
     return handleList;
+}
+
+QVariant Arrow::itemChange(GraphicsItemChange change, const QVariant &value)
+{
+    if (change == QGraphicsItem::ItemPositionChange) {
+
+        if(snap){
+            QPointF newPos = value.toPointF();
+            QPointF closestPoint = computeTopLeftGridPoint(newPos);
+            return closestPoint+=offset;
+        }
+    }
+    if (change == QGraphicsItem::ItemSelectedHasChanged) {
+        //bool selected = value.toBool();
+        if(!externalSelection){
+            sigHandler->connectctionSelected(this);
+        }
+        externalSelection = false;
+    }
+
+    return value;
 }
 
 /******************************************************************/
@@ -472,6 +504,7 @@ void LineHandle::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 
     painter->drawRect(myRect);
 }
+
 
 /**********************************************************************/
 

@@ -69,15 +69,20 @@ class Arrow : public BuilderItem
 {
 public:
 
-    Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
+    friend class LineHandle;
+
+    Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp = false,
       BuilderItem *parent = 0);
     Arrow(BuilderItem *startItem, BuilderItem *endItem, yarp::manager::Connection connection, int id,
+          bool isInApp = false,
       BuilderItem *parent = 0);
     QPointF connectionPoint();
     void setConnected(bool);
     int getId();
     QString getFrom();
     QString getTo();
+
+    void setConnectionSelected(bool selected);
 
     ~Arrow();
     int type() const  { return (int)QGraphicsItem::UserType + (int)itemType; }
@@ -96,7 +101,10 @@ protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event);
     //void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 private:
+    bool externalSelection;
+    bool isInApp;
     bool connected;
     yarp::manager::Connection connection;
     BuilderItem *myStartItem;
@@ -133,7 +141,6 @@ protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0);
-
 private:
     QPointF center;
     Arrow *parent;

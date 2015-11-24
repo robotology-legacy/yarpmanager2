@@ -24,6 +24,10 @@ void ItemSignalHandler::newConnectionAdded(QPointF p, QGraphicsItem *it)
     addNewConnection(p,it);
 }
 
+void ItemSignalHandler::onConnectionSelected(QGraphicsItem *it)
+{
+    connectctionSelected(it);
+}
 
 void ItemSignalHandler::onModuleSelected(QGraphicsItem *it)
 {

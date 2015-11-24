@@ -26,7 +26,7 @@ ModuleItem::ModuleItem(Module *module, int moduleId, bool isInApp,BuilderItem * 
     this->moduleId = moduleId;
     this->isInApp = isInApp;
     running = false;
-
+    externalSelection = false;
     startingPoint = QPointF(10,10);
     itemName = QString("%1").arg(module->getName());
 
@@ -42,6 +42,7 @@ ModuleItem::ModuleItem(Module *module, int moduleId, bool isInApp,BuilderItem * 
     if(module->getModelBase().points.size()>0){
         startingPoint = QPointF(module->getModelBase().points[0].x,module->getModelBase().points[0].y);
     }
+
 
 
     init();
@@ -241,7 +242,7 @@ void ModuleItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
     pressed = true;
     setZValue(zValue() + 10);
     QGraphicsItem::mousePressEvent(event);
-    sigHandler->moduleSelected(this);
+    //sigHandler->moduleSelected(this);
     if(isInApp && isSelected()){
         parentItem()->setSelected(true);
     }
@@ -267,6 +268,11 @@ void ModuleItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     }
 }
 
+void ModuleItem::setModuleSelected(bool selected)
+{
+    externalSelection = true;
+    setSelected(selected);
+}
 
 QVariant ModuleItem::itemChange(GraphicsItemChange change, const QVariant &value)
 {
@@ -277,11 +283,18 @@ QVariant ModuleItem::itemChange(GraphicsItemChange change, const QVariant &value
         foreach (PortItem *port, oPorts) {
             port->updateConnections();
         }
-        if(snap){
+        if(snap  && !isInApp){
             QPointF newPos = value.toPointF();
             QPointF closestPoint = computeTopLeftGridPoint(newPos);
             return closestPoint+=offset;
         }
+    }
+    if (change == QGraphicsItem::ItemSelectedHasChanged) {
+        //bool selected = value.toBool();
+        if(!externalSelection){
+            sigHandler->moduleSelected(this);
+        }
+        externalSelection = false;
     }
 
     return value;
@@ -531,16 +544,16 @@ OutputData *PortItem::getOutputData()
 
 QVariant PortItem::itemChange(GraphicsItemChange change, const QVariant &value)
 {
-    if (change == QGraphicsItem::ItemPositionChange) {
-        foreach (Arrow *arrow, arrows) {
-            arrow->updatePosition();
-        }
-        if(snap){
-            QPointF newPos = value.toPointF();
-            QPointF closestPoint = computeTopLeftGridPoint(newPos);
-            return closestPoint+=offset;
-        }
-    }
+//    if (change == QGraphicsItem::ItemPositionChange) {
+//        foreach (Arrow *arrow, arrows) {
+//            arrow->updatePosition();
+//        }
+////        if(snap  && !isInApp){
+////            QPointF newPos = value.toPointF();
+////            QPointF closestPoint = computeTopLeftGridPoint(newPos);
+////            return closestPoint+=offset;
+////        }
+//    }
 
     return value;
 }

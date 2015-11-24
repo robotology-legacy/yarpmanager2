@@ -27,44 +27,57 @@ BuilderWindow::BuilderWindow(Application *app, Manager *lazyManager, SafeManager
     view->setScene(scene);
     view->centerOn(scene->sceneRect().width()/2,scene->sceneRect().height()/2);
 
-    propertiesTab = new QTabWidget(this);
+    //propertiesTab = new QTabWidget(this);
 
-    QHBoxLayout *layout = new QHBoxLayout;
-    QSplitter *splitter = new QSplitter(this);
-    layout->addWidget(splitter);
-    splitter->addWidget(view);
-    splitter->addWidget(propertiesTab);
+
+
+
+//    appProperties  = new QTreeWidget();
+//    moduleProperties  = new QTreeWidget();
+//    moduleDescription = new QTreeWidget();
+//    appProperties->setColumnCount(2);
+//    moduleProperties->setColumnCount(2);
+//    moduleDescription->setColumnCount(2);
+//    appProperties->setHeaderLabels(QStringList() << "Property" << "Value");
+//    moduleProperties->setHeaderLabels(QStringList() << "Property" << "Value");
+//    moduleDescription->setHeaderLabels(QStringList() << "Item" << "Value");
+
+    //initApplicationTab();
+
+    QAction *zoomIn = builderToolbar.addAction("Zoom In");
+    QAction *zoomOut = builderToolbar.addAction("Zoom Out");
+    QAction *restoreZoom = builderToolbar.addAction("Reset Zoom");
+    builderToolbar.addSeparator();
+    QAction *showGrid = builderToolbar.addAction("Show Grid");
+    QAction *snapToGrid = builderToolbar.addAction("Snap to Grid");
+    builderToolbar.addSeparator();
+
+    snapToGrid->setCheckable(true);
+    showGrid->setCheckable(true);
+    showGrid->setChecked(true);
+    connect(snapToGrid,SIGNAL(triggered(bool)),this,SLOT(onSnap(bool)));
+    connect(restoreZoom,SIGNAL(triggered()),this,SLOT(onRestoreZoom()));
+    connect(showGrid,SIGNAL(triggered(bool)),this,SLOT(onShowGrid(bool)));
+    connect(zoomIn,SIGNAL(triggered(bool)),this,SLOT(onZoomIn()));
+    connect(zoomOut,SIGNAL(triggered(bool)),this,SLOT(onZoomOut()));
+
+
+    QVBoxLayout *layout = new QVBoxLayout;
+//    QSplitter *splitter = new QSplitter(this);
+    //layout->addWidget(&builderToolbar);
+    layout->addWidget(view);
+//    layout->setStretch(0,10);
+//    layout->setStretch(0,90);
+//    splitter->addWidget(view);
+//    splitter->addWidget(propertiesTab);
 
     layout->setMargin(0);
     view->centerOn(0,0);
     setLayout(layout);
 
 
-    appProperties  = new QTreeWidget();
-    moduleProperties  = new QTreeWidget();
-    moduleDescription = new QTreeWidget();
-    appProperties->setColumnCount(2);
-    moduleProperties->setColumnCount(2);
-    moduleDescription->setColumnCount(2);
-    appProperties->setHeaderLabels(QStringList() << "Property" << "Value");
-    moduleProperties->setHeaderLabels(QStringList() << "Property" << "Value");
-    moduleDescription->setHeaderLabels(QStringList() << "Item" << "Value");
-
-    initApplicationTab();
-
-    builderToolbar.addAction("Zoom In");
-    builderToolbar.addAction("Zoom Out");
-    QAction *restoreZoom = builderToolbar.addAction("Reset Zoom");
-    builderToolbar.addSeparator();
-    builderToolbar.addAction("Show Grid");
-    QAction *snapToGrid = builderToolbar.addAction("Snap to Grid");
-    builderToolbar.addSeparator();
-
-    snapToGrid->setCheckable(true);
-    connect(snapToGrid,SIGNAL(triggered(bool)),this,SLOT(onSnap(bool)));
-    connect(restoreZoom,SIGNAL(triggered()),this,SLOT(onRestoreZoom()));
-
 }
+
 
 BuilderWindow::~BuilderWindow()
 {
@@ -75,6 +88,33 @@ BuilderWindow::~BuilderWindow()
 QToolBar *BuilderWindow::getToolBar()
 {
     return &builderToolbar;
+}
+
+void BuilderWindow::removeToolBar()
+{
+    layout()->removeWidget(&builderToolbar);
+    builderToolbar.hide();
+}
+
+void BuilderWindow::addToolBar()
+{
+    layout()->removeWidget(&builderToolbar);
+    layout()->removeWidget(view);
+
+    layout()->addWidget(&builderToolbar);
+    layout()->addWidget(view);
+
+    builderToolbar.show();
+}
+
+void BuilderWindow::addModulesAction(QAction *act)
+{
+    modulesAction.append(act);
+}
+
+void BuilderWindow::addConnectionsAction(QAction *act)
+{
+    connectionsAction.append(act);
 }
 
 void BuilderWindow::setModuleRunning(bool running, int id)
@@ -150,6 +190,7 @@ void BuilderWindow::refresh()
 
         ApplicationItem *appItem = new ApplicationItem(application,safeManager,&usedModulesId);
         connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+        connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
         connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
         scene->addItem(appItem);
         appItem->init();
@@ -215,6 +256,37 @@ void BuilderWindow::refresh()
 
 }
 
+bool BuilderWindow::isApplicationPresent(Application *application)
+{
+    for(int i=0;i<itemsList.count();i++){
+        BuilderItem *it = (BuilderItem*)itemsList.at(i);
+        if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+            ApplicationItem *appItem = (ApplicationItem*)it;
+            if(appItem->getInnerApplication() == application){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool BuilderWindow::isModulePresent(Module *module)
+{
+    for(int i=0;i<itemsList.count();i++){
+        BuilderItem *it = (BuilderItem*)itemsList.at(i);
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *appItem = (ModuleItem*)it;
+            if(appItem->getInnerModule() == module){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+
+
 void BuilderWindow::init(bool refresh)
 {
     index = 0;
@@ -224,15 +296,12 @@ void BuilderWindow::init(bool refresh)
     if(ret){
 
         Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
-        ModulePContainer modules = safeManager->getKnowledgeBase()->getModules(mainApplication);
+        //ModulePContainer modules = safeManager->getKnowledgeBase()->getModules(mainApplication);
         CnnContainer connections = safeManager->getKnowledgeBase()->getConnections(mainApplication);
         ApplicaitonPContainer applications = safeManager->getKnowledgeBase()->getApplications(mainApplication);
         /*************************************/
         ExecutablePContainer exes = safeManager->getExecutables();
         ExecutablePIterator moditr;
-
-        //CnnContainer connections = safeManager->getConnections();
-
         /*************************************/
 
         QList <int> usedModulesId;
@@ -243,6 +312,7 @@ void BuilderWindow::init(bool refresh)
             Application* application = (*appItr);
             ApplicationItem *appItem = new ApplicationItem(application,safeManager,&usedModulesId);
             connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
             connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
             scene->addItem(appItem);
             appItem->init();
@@ -276,34 +346,6 @@ void BuilderWindow::init(bool refresh)
             }
         }
 
-
-
-//        ModulePIterator itr;
-//        for(itr=modules.begin(); itr!=modules.end(); itr++){
-//            Module* module = (*itr);
-//            QString modLabel = QString("%1").arg(module->getLabel());
-//            QString moduleId;
-//            for(moditr=exes.begin(); moditr<exes.end(); moditr++){
-//                QString label = QString("%1").arg((*moditr)->getModule()->getLabel());
-//                QString id = QString("%1").arg((*moditr)->getID());
-
-//                if(modLabel == label){
-
-//                    bool idFound = false;
-//                    foreach (int usedId, usedModulesId) {
-//                        if(usedId == id.toInt()){
-//                            idFound = true;
-//                        }
-//                    }
-//                    if(!idFound){
-//                        usedModulesId.append(id.toInt());
-//                        moduleId = id;
-//                        break;
-//                    }
-//                  }
-//            }
-//            addModule(module,moduleId.toInt());
-//        }
 
         index = (index/900)*100+50;
         CnnIterator citr;
@@ -344,7 +386,7 @@ void BuilderWindow::init(bool refresh)
                 if(!bExist){
                     sourcePort = new SourcePortItem((*citr).from());
                     connect(sourcePort->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
-                    connect(sourcePort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
+
                     itemsList.append(sourcePort);
                     scene->addItem(sourcePort);
                     source = sourcePort;
@@ -380,7 +422,8 @@ void BuilderWindow::init(bool refresh)
                     }
                 }
                 if(!bExist){
-                    destPort = new DestinationPortItem((*citr).to(),app->getPrefix());
+                    destPort = new DestinationPortItem((*citr).to());
+                    connect(destPort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
                     itemsList.append(destPort);
                     dest = destPort;
 
@@ -405,6 +448,8 @@ void BuilderWindow::init(bool refresh)
             }else{
                 if(source && dest){
                     arrow = new Arrow(source, dest, baseCon,id);
+                    arrow->setActions(connectionsAction);
+                    connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
                     arrow->setColor(QColor(Qt::red));
                     source->addArrow(arrow);
                     dest->addArrow(arrow);
@@ -429,6 +474,8 @@ void BuilderWindow::init(bool refresh)
 void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 {
     Arrow *arrow = new Arrow((BuilderItem*)startItem, (BuilderItem*)endItem, safeManager);
+    arrow->setActions(connectionsAction);
+    connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
     arrow->setColor(QColor(Qt::red));
     ((BuilderItem*)startItem)->addArrow(arrow);
     ((BuilderItem*)endItem)->addArrow(arrow);
@@ -463,6 +510,7 @@ void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
 {
     ModuleItem *it = new ModuleItem(module,moduleId);
+    it->setActions(modulesAction);
     connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
@@ -501,8 +549,8 @@ void BuilderWindow::onAddedModule(void *mod,QPointF pos)
         string prefix = strAppPrefix+module->getBasePrefix();
         safeManager->getKnowledgeBase()->setModulePrefix(module, prefix.c_str(), false);
 
-        safeManager->getKnowledgeBase()->removeApplication(mainApplication);
-        safeManager->getKnowledgeBase()->addApplication(mainApplication);
+//        safeManager->getKnowledgeBase()->removeApplication(mainApplication);
+//        safeManager->getKnowledgeBase()->addApplication(mainApplication);
 
 
 
@@ -510,7 +558,7 @@ void BuilderWindow::onAddedModule(void *mod,QPointF pos)
 //        scene->clear();
 
 
-        refreshApplication();
+        //refreshApplication();
         //refresh();
         init(true);
     }
@@ -518,130 +566,215 @@ void BuilderWindow::onAddedModule(void *mod,QPointF pos)
 
 }
 
+void BuilderWindow::setSelectedConnections(QList<int>selectedIds)
+{
+    foreach (QGraphicsItem *it, itemsList) {
+        if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
+            Arrow *arrow = (Arrow*)it;
+            if(selectedIds.contains(arrow->getId())){
+                arrow->setConnectionSelected(true);
+            }else{
+                arrow->setConnectionSelected(false);
+            }
+        }else
+            if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *app = (ApplicationItem*)it;
+                app->setSelectedConnections(selectedIds);
+            }
+    }
+}
+
+void BuilderWindow::setSelectedModules(QList<int>selectedIds)
+{
+    foreach (QGraphicsItem *it, itemsList) {
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)it;
+            if(selectedIds.contains(mod->getId())){
+                mod->setModuleSelected(true);
+            }else{
+                mod->setModuleSelected(false);
+            }
+        }else
+            if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *app = (ApplicationItem*)it;
+                app->setSelectedModules(selectedIds);
+            }
+    }
+}
+
+void BuilderWindow::onConnectionSelected(QGraphicsItem *it)
+{
+    //initModuleTab((ModuleItem*)it);
+    Q_UNUSED(it);
+
+    QList<int> selectedModules;
+    foreach (QGraphicsItem *item , scene->selectedItems()) {
+        BuilderItem *bItem = (BuilderItem*)item;
+
+        if(bItem->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
+            Arrow *arrow = (Arrow*)bItem;
+            selectedModules.append(arrow->getId());
+        }
+    }
+    setConnectionSelected(selectedModules);
+}
 
 void BuilderWindow::onModuleSelected(QGraphicsItem *it)
 {
-    initModuleTab((ModuleItem*)it);
+    //initModuleTab((ModuleItem*)it);
+    Q_UNUSED(it);
+
+    QList<int> selectedModules;
+    foreach (QGraphicsItem *item , scene->selectedItems()) {
+        BuilderItem *bItem = (BuilderItem*)item;
+
+        if(bItem->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)bItem;
+            selectedModules.append(mod->getId());
+        }
+    }
+    setModuleSelected(selectedModules);
 }
 
 void BuilderWindow::onApplicationSelected(QGraphicsItem* it)
 {
-    initApplicationTab((ApplicationItem*)it);
+    //initApplicationTab((ApplicationItem*)it);
 }
 
 void BuilderWindow::initApplicationTab(ApplicationItem *application)
 {
-    Application *auxApp = app;
-    if(application){
-        auxApp = application->getInnerApplication();
-    }
-    propertiesTab->clear();
-    propertiesTab->addTab(appProperties,"Application Properties");
-    appProperties->clear();
-    if(appProperties->topLevelItemCount() <=0){
-        QTreeWidgetItem *appName = new QTreeWidgetItem(appProperties,QStringList() << "Name" << auxApp->getName());
-        QTreeWidgetItem *appDescr = new QTreeWidgetItem(appProperties,QStringList() << "Description" << auxApp->getDescription());
-        QTreeWidgetItem *appVersion = new QTreeWidgetItem(appProperties,QStringList() << "Version" << auxApp->getVersion());
-        QString authors;
-        for(int i=0;i<auxApp->authorCount();i++){
-            authors = QString("%1%2;").arg(authors).arg(auxApp->getAuthorAt(i).getName());
-        }
-        QTreeWidgetItem *appAuthors = new QTreeWidgetItem(appProperties,QStringList() << "Name" << authors);
+//    Application *auxApp = app;
+//    if(application){
+//        auxApp = application->getInnerApplication();
+//    }
+//    propertiesTab->clear();
+//    propertiesTab->addTab(appProperties,"Application Properties");
+//    appProperties->clear();
+//    if(appProperties->topLevelItemCount() <=0){
+//        QTreeWidgetItem *appName = new QTreeWidgetItem(appProperties,QStringList() << "Name" << auxApp->getName());
+//        QTreeWidgetItem *appDescr = new QTreeWidgetItem(appProperties,QStringList() << "Description" << auxApp->getDescription());
+//        QTreeWidgetItem *appVersion = new QTreeWidgetItem(appProperties,QStringList() << "Version" << auxApp->getVersion());
+//        QString authors;
+//        for(int i=0;i<auxApp->authorCount();i++){
+//            authors = QString("%1%2;").arg(authors).arg(auxApp->getAuthorAt(i).getName());
+//        }
+//        QTreeWidgetItem *appAuthors = new QTreeWidgetItem(appProperties,QStringList() << "Name" << authors);
 
-        appProperties->addTopLevelItem(appName);
-        appProperties->addTopLevelItem(appDescr);
-        appProperties->addTopLevelItem(appVersion);
-        appProperties->addTopLevelItem(appAuthors);
-    }
+//        appProperties->addTopLevelItem(appName);
+//        appProperties->addTopLevelItem(appDescr);
+//        appProperties->addTopLevelItem(appVersion);
+//        appProperties->addTopLevelItem(appAuthors);
+//    }
 
 }
 
 void BuilderWindow::initModuleTab(ModuleItem *it)
 {
-    propertiesTab->clear();
-    propertiesTab->addTab(moduleProperties,"Module Properties");
-    propertiesTab->addTab(moduleDescription,"Description");
-    moduleProperties->clear();
-    moduleDescription->clear();
+//    propertiesTab->clear();
+//    propertiesTab->addTab(moduleProperties,"Module Properties");
+//    propertiesTab->addTab(moduleDescription,"Description");
+//    moduleProperties->clear();
+//    moduleDescription->clear();
 
-    QTreeWidgetItem *modName = new QTreeWidgetItem(moduleProperties,QStringList() << "Name" << it->getInnerModule()->getName());
-    QTreeWidgetItem *modNode = new QTreeWidgetItem(moduleProperties,QStringList() << "Node" << it->getInnerModule()->getHost());
-    QTreeWidgetItem *modStdio = new QTreeWidgetItem(moduleProperties,QStringList() << "Stdio" << it->getInnerModule()->getStdio());
-    QTreeWidgetItem *modWorkDir = new QTreeWidgetItem(moduleProperties,QStringList() << "Workdir" << it->getInnerModule()->getWorkDir());
-    QTreeWidgetItem *modPrefix = new QTreeWidgetItem(moduleProperties,QStringList() << "Prefix" << it->getInnerModule()->getPrefix());
-    QTreeWidgetItem *modDeployer = new QTreeWidgetItem(moduleProperties,QStringList() << "Deployer");
-    QTreeWidgetItem *modParams = new QTreeWidgetItem(moduleProperties,QStringList() << "Parameters" << it->getInnerModule()->getParam());
+//    QTreeWidgetItem *modName = new QTreeWidgetItem(moduleProperties,QStringList() << "Name" << it->getInnerModule()->getName());
+//    QTreeWidgetItem *modNode = new QTreeWidgetItem(moduleProperties,QStringList() << "Node" << it->getInnerModule()->getHost());
+//    QTreeWidgetItem *modStdio = new QTreeWidgetItem(moduleProperties,QStringList() << "Stdio" << it->getInnerModule()->getStdio());
+//    QTreeWidgetItem *modWorkDir = new QTreeWidgetItem(moduleProperties,QStringList() << "Workdir" << it->getInnerModule()->getWorkDir());
+//    QTreeWidgetItem *modPrefix = new QTreeWidgetItem(moduleProperties,QStringList() << "Prefix" << it->getInnerModule()->getPrefix());
+//    QTreeWidgetItem *modDeployer = new QTreeWidgetItem(moduleProperties,QStringList() << "Deployer");
+//    QTreeWidgetItem *modParams = new QTreeWidgetItem(moduleProperties,QStringList() << "Parameters" << it->getInnerModule()->getParam());
 
-    modNode->setFlags(modNode->flags() | Qt::ItemIsEditable);
-    modStdio->setFlags(modStdio->flags() | Qt::ItemIsEditable);
+//    modNode->setFlags(modNode->flags() | Qt::ItemIsEditable);
+//    modStdio->setFlags(modStdio->flags() | Qt::ItemIsEditable);
 
-    moduleProperties->addTopLevelItem(modName);
-    moduleProperties->addTopLevelItem(modNode);
-    moduleProperties->addTopLevelItem(modStdio);
-    moduleProperties->addTopLevelItem(modWorkDir);
-    moduleProperties->addTopLevelItem(modPrefix);
-    moduleProperties->addTopLevelItem(modDeployer);
-    moduleProperties->addTopLevelItem(modParams);
+//    moduleProperties->addTopLevelItem(modName);
+//    moduleProperties->addTopLevelItem(modNode);
+//    moduleProperties->addTopLevelItem(modStdio);
+//    moduleProperties->addTopLevelItem(modWorkDir);
+//    moduleProperties->addTopLevelItem(modPrefix);
+//    moduleProperties->addTopLevelItem(modDeployer);
+//    moduleProperties->addTopLevelItem(modParams);
 
 
-    QTreeWidgetItem *nameItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Name" << it->getInnerModule()->getName());
-    QTreeWidgetItem *versionItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Version" << it->getInnerModule()->getVersion());
-    QTreeWidgetItem *descriptionItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Description" << it->getInnerModule()->getDescription());
-    QTreeWidgetItem *parametersItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Parameters");
-    for(int i=0;i<it->getInnerModule()->argumentCount();i++){
-        Argument a = it->getInnerModule()->getArgumentAt(i);
-        QTreeWidgetItem *it = new QTreeWidgetItem(parametersItem,QStringList() << a.getParam() << a.getDescription());
-        Q_UNUSED(it);
-    }
+//    QTreeWidgetItem *nameItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Name" << it->getInnerModule()->getName());
+//    QTreeWidgetItem *versionItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Version" << it->getInnerModule()->getVersion());
+//    QTreeWidgetItem *descriptionItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Description" << it->getInnerModule()->getDescription());
+//    QTreeWidgetItem *parametersItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Parameters");
+//    for(int i=0;i<it->getInnerModule()->argumentCount();i++){
+//        Argument a = it->getInnerModule()->getArgumentAt(i);
+//        QTreeWidgetItem *it = new QTreeWidgetItem(parametersItem,QStringList() << a.getParam() << a.getDescription());
+//        Q_UNUSED(it);
+//    }
 
-    QTreeWidgetItem *authorsItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Authors" << it->getInnerModule()->getName());
-    for(int i=0;i<it->getInnerModule()->authorCount();i++){
-        Author a = it->getInnerModule()->getAuthorAt(i);
-        QTreeWidgetItem *it = new QTreeWidgetItem(authorsItem,QStringList() << a.getName() << a.getEmail());
-        Q_UNUSED(it);
-    }
+//    QTreeWidgetItem *authorsItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Authors" << it->getInnerModule()->getName());
+//    for(int i=0;i<it->getInnerModule()->authorCount();i++){
+//        Author a = it->getInnerModule()->getAuthorAt(i);
+//        QTreeWidgetItem *it = new QTreeWidgetItem(authorsItem,QStringList() << a.getName() << a.getEmail());
+//        Q_UNUSED(it);
+//    }
 
-    QTreeWidgetItem *inputsItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Inputs" << it->getInnerModule()->getName());
-    for(int i=0;i<it->getInnerModule()->inputCount();i++){
-        InputData a = it->getInnerModule()->getInputAt(i);
+//    QTreeWidgetItem *inputsItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Inputs" << it->getInnerModule()->getName());
+//    for(int i=0;i<it->getInnerModule()->inputCount();i++){
+//        InputData a = it->getInnerModule()->getInputAt(i);
 
-        QTreeWidgetItem *type = new QTreeWidgetItem(inputsItem,QStringList() << "Type" << a.getName());
-        QTreeWidgetItem *port = new QTreeWidgetItem(type,QStringList() << "Port" << a.getPort());
-        QTreeWidgetItem *desc = new QTreeWidgetItem(type,QStringList() << "Description" << a.getDescription());
-        QTreeWidgetItem *req = new QTreeWidgetItem(type,QStringList() << "Required" << (a.isRequired() ? "yes" : "no"));
-        Q_UNUSED(port);
-        Q_UNUSED(desc);
-        Q_UNUSED(req);
-    }
+//        QTreeWidgetItem *type = new QTreeWidgetItem(inputsItem,QStringList() << "Type" << a.getName());
+//        QTreeWidgetItem *port = new QTreeWidgetItem(type,QStringList() << "Port" << a.getPort());
+//        QTreeWidgetItem *desc = new QTreeWidgetItem(type,QStringList() << "Description" << a.getDescription());
+//        QTreeWidgetItem *req = new QTreeWidgetItem(type,QStringList() << "Required" << (a.isRequired() ? "yes" : "no"));
+//        Q_UNUSED(port);
+//        Q_UNUSED(desc);
+//        Q_UNUSED(req);
+//    }
 
-    QTreeWidgetItem *outputsItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Outputs" << it->getInnerModule()->getName());
-    for(int i=0;i<it->getInnerModule()->outputCount();i++){
-        OutputData a = it->getInnerModule()->getOutputAt(i); //TODO controllare
+//    QTreeWidgetItem *outputsItem = new QTreeWidgetItem(moduleDescription,QStringList() << "Outputs" << it->getInnerModule()->getName());
+//    for(int i=0;i<it->getInnerModule()->outputCount();i++){
+//        OutputData a = it->getInnerModule()->getOutputAt(i); //TODO controllare
 
-        QTreeWidgetItem *type = new QTreeWidgetItem(outputsItem,QStringList() << "Type" << a.getName());
-        QTreeWidgetItem *port = new QTreeWidgetItem(type,QStringList() << "Port" << a.getPort());
-        QTreeWidgetItem *desc = new QTreeWidgetItem(type,QStringList() << "Description" << a.getDescription());
-        Q_UNUSED(port);
-        Q_UNUSED(desc);
-    }
+//        QTreeWidgetItem *type = new QTreeWidgetItem(outputsItem,QStringList() << "Type" << a.getName());
+//        QTreeWidgetItem *port = new QTreeWidgetItem(type,QStringList() << "Port" << a.getPort());
+//        QTreeWidgetItem *desc = new QTreeWidgetItem(type,QStringList() << "Description" << a.getDescription());
+//        Q_UNUSED(port);
+//        Q_UNUSED(desc);
+//    }
 
-    moduleDescription->addTopLevelItem(nameItem);
-    moduleDescription->addTopLevelItem(versionItem);
-    moduleDescription->addTopLevelItem(descriptionItem);
-    moduleDescription->addTopLevelItem(parametersItem);
-    moduleDescription->addTopLevelItem(authorsItem);
-    moduleDescription->addTopLevelItem(inputsItem);
-    moduleDescription->addTopLevelItem(outputsItem);
+//    moduleDescription->addTopLevelItem(nameItem);
+//    moduleDescription->addTopLevelItem(versionItem);
+//    moduleDescription->addTopLevelItem(descriptionItem);
+//    moduleDescription->addTopLevelItem(parametersItem);
+//    moduleDescription->addTopLevelItem(authorsItem);
+//    moduleDescription->addTopLevelItem(inputsItem);
+//    moduleDescription->addTopLevelItem(outputsItem);
 }
 
 void BuilderWindow::onRestoreZoom()
 {
-    view->resetMatrix();
+    //view->resetMatrix();
+    QRectF rr = scene->itemsBoundingRect();
+    view->fitInView(rr,Qt::KeepAspectRatio);
+}
+
+void BuilderWindow::onZoomIn()
+{
+    view->scale(1.1,1.1);
+}
+
+void BuilderWindow::onZoomOut()
+{
+    view->scale(0.9,0.9);
 }
 
 void BuilderWindow::onSnap(bool checked)
 {
     scene->snapToGrid(checked);
+}
+
+void BuilderWindow::onShowGrid(bool checked)
+{
+    if(checked){
+        scene->setBackgroundBrush(QPixmap(":/images/background2.png"));
+    }else{
+        scene->setBackgroundBrush(QBrush(QColor("#f8f8ff")));
+    }
 }
 
 void BuilderWindow::findInputOutputData(Connection& cnn,  ModulePContainer &modules,
@@ -765,23 +898,7 @@ PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePref
 }
 
 
-void BuilderWindow::setSelectedModules(QList<int>selectedIds)
-{
-    foreach (QGraphicsItem *it, itemsList) {
-        if(it->type() == QGraphicsItem::UserType + ModuleItemType){
-            ModuleItem *mod = (ModuleItem*)it;
-            if(selectedIds.contains(mod->getId())){
-                mod->setSelected(true);
-            }else{
-                mod->setSelected(false);
-            }
-        }else
-            if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
-                ApplicationItem *app = (ApplicationItem*)it;
-                app->setSelectedModules(selectedIds);
-            }
-    }
-}
+
 
 void BuilderWindow::setOutputPortAvailable(QString oData, bool available)
 {

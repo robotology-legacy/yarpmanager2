@@ -78,6 +78,12 @@ void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 
 void BuilderScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    qDebug() << "mousePressEvent";
+    if(currentLine){
+        removeItem(currentLine);
+        delete currentLine;
+        currentLine = NULL;
+    }
 
 //    if(currentLine){
 //        QList<QGraphicsItem *> startItems = items(currentLine->line().p1());
@@ -180,13 +186,16 @@ void BuilderScene::onNewConnectionRequested(QPointF p,QGraphicsItem *item)
     if(!((BuilderItem*)item)->allowOutputConnections()){
         return;
     }
-    startConnectionItem = item;
-    startingPoint = item->mapToScene(p);
+
     if(!currentLine){
+        startConnectionItem = item;
+        startingPoint = item->mapToScene(p);
         currentLine = new QGraphicsLineItem();
         addItem(currentLine);
-
-
+    }else{
+        removeItem(currentLine);
+        delete currentLine;
+        currentLine = NULL;
     }
 
 
@@ -195,11 +204,13 @@ void BuilderScene::onNewConnectionRequested(QPointF p,QGraphicsItem *item)
 
 void BuilderScene::onNewConnectionAdded(QPointF p,QGraphicsItem *item)
 {
+    qDebug() << "onNewConnectionAdded";
     if(startConnectionItem){
         if(currentLine){
             removeItem(currentLine);
             delete currentLine;
             currentLine = NULL;
+        }
 
             BuilderItem *startItem = (BuilderItem*)startConnectionItem;
             BuilderItem *endItem = (BuilderItem*)item;
@@ -217,7 +228,7 @@ void BuilderScene::onNewConnectionAdded(QPointF p,QGraphicsItem *item)
 
                }
            }
-        }
+
         startConnectionItem = NULL;
     }
 
@@ -251,10 +262,11 @@ void BuilderScene::snapToGrid(bool snap)
 {
     this->snap = snap;
     foreach (QGraphicsItem *it, items()) {
-        if(it->type() == QGraphicsItem::UserType + (int)ConnectionItemType ||
-            it->type() == QGraphicsItem::UserType + (int)HandleItemType){
-            return;
-        }
+//        if(it->type() == QGraphicsItem::UserType + (int)ConnectionItemType ||
+//            it->type() == QGraphicsItem::UserType + (int)HandleItemType){
+//            return;
+//        }
+
         ((BuilderItem*)it)->snapToGrid(snap);
     }
 }

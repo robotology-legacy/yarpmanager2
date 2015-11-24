@@ -67,3 +67,14 @@ QString BuilderItem::getItemName()
 {
     return itemName;
 }
+
+QList<QAction*> BuilderItem::getActions()
+{
+    return actions;
+}
+
+void BuilderItem::setActions(QList<QAction*> acts)
+{
+    actions = acts;
+}
+

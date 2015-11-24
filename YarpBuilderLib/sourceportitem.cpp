@@ -187,7 +187,7 @@ QVariant SourcePortItem::itemChange(GraphicsItemChange change, const QVariant &v
         foreach (Arrow *arrow, arrows) {
             arrow->updatePosition();
         }
-        if(snap){
+        if(snap && !isInApp){
             QPointF newPos = value.toPointF();
             QPointF closestPoint = computeTopLeftGridPoint(newPos);
             return closestPoint+=offset;

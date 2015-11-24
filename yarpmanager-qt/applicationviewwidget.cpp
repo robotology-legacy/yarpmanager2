@@ -81,6 +81,7 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,yar
     ui->builderContainer->setLayout(l);
     l->setMargin(0);
 
+
     builderWindowContainer = new QMainWindow(NULL,Qt::Widget);
     builderWindowContainer->setDockNestingEnabled(true);
     l->addWidget(builderWindowContainer);
@@ -89,16 +90,41 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,yar
     builderWindowContainer->addDockWidget(Qt::TopDockWidgetArea,builderWidget);
     builder = YarpBuilderLib::getBuilder(this->app,lazyManager,&safeManager);
     builderWidget->setWidget(builder);
-    builderWidget->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    builder->init();
 
+    builderWidget->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    connect(builderWidget,SIGNAL(topLevelChanged(bool)),this,SLOT(onBuilderFloatChanged(bool)));
+
+    builder->addModulesAction(modRunAction);
+    builder->addModulesAction(modStopAction);
+    builder->addModulesAction(modkillAction);
+    builder->addModulesAction(modSeparator);
+    builder->addModulesAction(modRefreshAction);
+    builder->addModulesAction(modSelectAllAction);
+    builder->addModulesAction(modAttachAction);
+    builder->addModulesAction(modAssignAction);
+
+    builder->addConnectionsAction(connConnectAction);
+    builder->addConnectionsAction(connDisconnectAction);
+    builder->addConnectionsAction(connSeparatorAction);
+    builder->addConnectionsAction(connRefreshAction);
+    builder->addConnectionsAction(connSelectAllAction);
+    builder->addConnectionsAction(conn1SeparatorAction);
+
+
+    builder->init();
     builderToolBar = builder->getToolBar();
-    builderWindowContainer->addToolBar(Qt::TopToolBarArea,builderToolBar);
+    //builderWindowContainer->addToolBar(Qt::TopToolBarArea,builderToolBar);
+
+
+
 
     connect(builder,SIGNAL(refreshApplication()),
             this,SLOT(onRefreshApplication()),Qt::DirectConnection);
+    connect(builder,SIGNAL(setModuleSelected(QList<int>)),this,SLOT(onModuleSelected(QList<int>)));
+    connect(builder,SIGNAL(setConnectionSelected(QList<int>)),this,SLOT(onConnectionSelected(QList<int>)));
     //connect(builderWidget,SIGNAL(topLevelChanged(bool)),this,SLOT(onBuilderFloatingChanged(bool)));
-
+    ui->splitter->setStretchFactor(0,50);
+    ui->splitter->setStretchFactor(1,10);
 
 
 }
@@ -108,14 +134,35 @@ ApplicationViewWidget::~ApplicationViewWidget()
     delete ui;
 }
 
-//void ApplicationViewWidget::onBuilderFloatingChanged(bool floating)
-//{
-//    if(floating){
+void ApplicationViewWidget::showBuilder(bool show)
+{
+    builderWidget->setVisible(show);
+}
 
-//    }else{
-//        builderWindowContainer->removeToolBar(builderToolBar);
-//    }
-//}
+QToolBar* ApplicationViewWidget::getBuilderToolBar()
+{
+    return builderToolBar;
+}
+
+bool ApplicationViewWidget::isBuilderFloating()
+{
+    return builderWidget->isFloating();
+}
+
+void ApplicationViewWidget::onBuilderFloatChanged(bool floating)
+{
+
+    if(floating){
+        builderWindowFloating(floating);
+        builder->addToolBar();
+        builderToolBar = NULL;
+    }else{
+        builder->removeToolBar();
+        builderToolBar = builder->getToolBar();
+        builderWindowFloating(floating);
+    }
+
+}
 
 /*! \brief Create the context menu for the modules tree. */
 void ApplicationViewWidget::createModulesViewContextMenu()
@@ -239,6 +286,17 @@ void ApplicationViewWidget::onConnectionItemSelectionChanged()
         connSeparatorAction->setEnabled(true);
         connRefreshAction->setEnabled(true);
     }
+
+    if(ui->connectionList->hasFocus()){
+        QList<int>selectedIds;
+        QList<QTreeWidgetItem*> selectedItems = ui->connectionList->selectedItems();
+        foreach(QTreeWidgetItem *it,selectedItems){
+            QString id = it->text(1);
+            selectedIds.append(id.toInt());
+        }
+
+        builder->setSelectedConnections(selectedIds);
+    }
 }
 
 /*! \brief Called when an item of the modules tree has been selected. */
@@ -266,14 +324,33 @@ void ApplicationViewWidget::onModuleItemSelectionChanged()
         modAssignAction->setEnabled(true);
         modRefreshAction->setEnabled(true);
 
-        QList<int>selectedIds;
-        QList<QTreeWidgetItem*> selectedItems = ui->moduleList->selectedItems();
-        foreach(QTreeWidgetItem *it,selectedItems){
-            QString id = it->text(1);
-            selectedIds.append(id.toInt());
-        }
 
-        builder->setSelectedModules(selectedIds);
+
+        if(ui->moduleList->hasFocus()){
+
+            QList<int>selectedIds;
+            QList<QTreeWidgetItem*> selectedItems = ui->moduleList->selectedItems();
+            foreach(QTreeWidgetItem *it,selectedItems){
+                if(it->data(0,Qt::UserRole).toInt() == APPLICATION){
+                    for(int j=0;j<it->childCount();j++){
+                        QTreeWidgetItem *child = it->child(j);
+                        child->setSelected(true);
+                    }
+
+                }
+
+            }
+            selectedItems = ui->moduleList->selectedItems();
+            foreach(QTreeWidgetItem *it,selectedItems){
+                if(it->data(0,Qt::UserRole).toInt() == APPLICATION){
+                    continue;
+                }
+                QString id = it->text(1);
+                selectedIds.append(id.toInt());
+            }
+
+            builder->setSelectedModules(selectedIds);
+        }
     }
 }
 
@@ -313,12 +390,64 @@ void ApplicationViewWidget::onRefreshApplication()
     reportErrors();
 }
 
+void ApplicationViewWidget::onConnectionSelected(QList<int> id)
+{
+    for(int i=0;i<ui->connectionList->topLevelItemCount();i++){
+        ui->connectionList->topLevelItem(i)->setSelected(false);
+    }
+    for(int i=0;i<ui->connectionList->topLevelItemCount();i++){
+        for(int j=0;j<id.count();j++){
+            if(ui->connectionList->topLevelItem(i)->text(1).toInt() == id.at(j)){
+                ui->connectionList->topLevelItem(i)->setSelected(true);
+            }
+        }
+
+    }
+}
+
+void ApplicationViewWidget::onModuleSelected(QList<int> id)
+{
+    for(int i=0;i<ui->moduleList->topLevelItemCount();i++){
+        ui->moduleList->topLevelItem(i)->setSelected(false);
+        if(ui->moduleList->topLevelItem(i)->data(0,Qt::UserRole) == APPLICATION ){
+            for(int k=0;k<ui->moduleList->topLevelItem(i)->childCount();k++){
+                ui->moduleList->topLevelItem(i)->child(k)->setSelected(false);
+            }
+        }
+    }
+
+    for(int i=0;i<ui->moduleList->topLevelItemCount();i++){
+        if(ui->moduleList->topLevelItem(i)->data(0,Qt::UserRole) == APPLICATION ){
+            for(int k=0;k<ui->moduleList->topLevelItem(i)->childCount();k++){
+                for(int j=0;j<id.count();j++){
+                    if(ui->moduleList->topLevelItem(i)->child(k)->text(1).toInt() == id.at(j)){
+                        ui->moduleList->topLevelItem(i)->child(k)->setSelected(true);
+                    }
+                }
+
+
+            }
+
+        }else{
+            for(int j=0;j<id.count();j++){
+                if(ui->moduleList->topLevelItem(i)->text(1).toInt() == id.at(j)){
+                    ui->moduleList->topLevelItem(i)->setSelected(true);
+                }
+            }
+        }
+
+
+    }
+}
+
 /*! \brief Refresh the widget. */
 void ApplicationViewWidget::updateApplicationWindow()
 {
     ui->moduleList->clear();
     ui->connectionList->clear();
     ui->resourcesList->clear();
+
+    disconnect(ui->moduleList,SIGNAL(itemChanged(QTreeWidgetItem*,int)),this,SLOT(onModuleItemChanged(QTreeWidgetItem*,int)));
 
     yarp::manager::ExecutablePContainer modules = safeManager.getExecutables();
     yarp::manager::CnnContainer connections  = safeManager.getConnections();
@@ -329,6 +458,29 @@ void ApplicationViewWidget::updateApplicationWindow()
     for(moditr=modules.begin(); moditr<modules.end(); moditr++)
     {
 
+        Module *mod = (*moditr)->getModule();
+        CustomTreeWidgetItem *appNode = NULL;
+        QString modLabel = mod->owner()->getLabel();
+        QString appLabel = app->getLabel();
+        if(modLabel != appLabel){
+
+            for(int i=0; i < ui->moduleList->topLevelItemCount();i++) {
+                if(ui->moduleList->topLevelItem(i)->data(0,Qt::UserRole + 1).toString() == modLabel){
+                    appNode = (CustomTreeWidgetItem*) ui->moduleList->topLevelItem(i);
+                    break;
+                }
+            }
+            if(!appNode){
+                QStringList l;
+                l << ((Application*)mod->owner())->getName();
+
+                appNode = new CustomTreeWidgetItem(ui->moduleList,l);
+                appNode->setData(0,Qt::UserRole + 1,modLabel);
+                appNode->setData(0,Qt::UserRole,APPLICATION);
+                appNode->setExpanded(true);
+                appNode->setIcon(0,QIcon(":/run22.svg"));
+            }
+        }
         QString id = QString("%1").arg((*moditr)->getID());
         QString command = QString("%1").arg((*moditr)->getCommand());
         QString host = QString("%1").arg((*moditr)->getHost());
@@ -339,7 +491,12 @@ void ApplicationViewWidget::updateApplicationWindow()
 
         QStringList l;
         l << command << id << "stopped" << host << param << stdio << workDir << env;
-        CustomTreeWidgetItem *it = new CustomTreeWidgetItem(ui->moduleList,l);
+
+        CustomTreeWidgetItem *it;
+        if(!appNode)
+            it = new CustomTreeWidgetItem(ui->moduleList,l);
+        else
+            it = new CustomTreeWidgetItem(appNode,l);
 
         if (host=="localhost")
         {
@@ -416,7 +573,16 @@ void ApplicationViewWidget::updateApplicationWindow()
         }
         id++;
     }
+    connect(ui->moduleList,SIGNAL(itemChanged(QTreeWidgetItem*,int)),this,SLOT(onModuleItemChanged(QTreeWidgetItem*,int)));
+}
 
+void ApplicationViewWidget::onModuleItemChanged(QTreeWidgetItem *it,int col)
+{
+    Qt::ItemFlags tmp = it->flags();
+    if (!(tmp & Qt::ItemIsEditable)) {
+        return;
+    }
+    qDebug() << "CHANGED " << it->text(col);
 }
 
 /*! \brief Called when an item has been double clicked */
@@ -1225,6 +1391,7 @@ void ApplicationViewWidget::onSelfConnect(int which)
         QString from = it->text(3);
         QString to = it->text(4);
         builder->setConnectionConnected(true,from,to);
+        it->setSelected(true);
     }
 
            /* row[m_conColumns.m_col_status] = "connected";
@@ -1245,6 +1412,7 @@ void ApplicationViewWidget::onSelfDisconnect(int which)
         QString from = it->text(3);
         QString to = it->text(4);
         builder->setConnectionConnected(false,from,to);
+        it->setSelected(true);
     }
     reportErrors();
 }
@@ -1298,6 +1466,7 @@ void ApplicationViewWidget::onSelfStart(int which)
         it->setIcon(0,QIcon(":/apply.svg"));
         it->setTextColor(2,QColor("#008C00"));
         builder->setModuleRunning(true,which);
+        it->setSelected(true);
         //row[m_modColumns.m_col_editable] = false;
         //row[m_modColumns.m_col_color] = Gdk::Color("#008C00");
         //row.set_value(0, m_refPixRunning);
@@ -1316,6 +1485,7 @@ void ApplicationViewWidget::onSelfStop(int which)
         it->setIcon(0,QIcon(":/close.svg"));
         it->setTextColor(2,QColor("#BF0303"));
         builder->setModuleRunning(false,which);
+        it->setSelected(true);
     }
     reportErrors();
 }

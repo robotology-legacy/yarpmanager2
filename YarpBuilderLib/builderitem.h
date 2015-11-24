@@ -2,7 +2,7 @@
 #define BUILDERITEM_H
 
 #include <QObject>
-
+#include <QAction>
 #include <QPainter>
 #include <QGraphicsPolygonItem>
 #include <QGraphicsScene>
@@ -50,6 +50,8 @@ public:
     bool allowOutputConnections();
     void snapToGrid(bool snap);
     QPointF computeTopLeftGridPoint(const QPointF &pointP);
+    QList<QAction*> getActions();
+    void setActions(QList<QAction*>);
 
 
 protected:
@@ -71,6 +73,7 @@ protected:
 
     ItemSignalHandler *sigHandler;
     QList<Arrow *> arrows;
+    QList<QAction*> actions;
 
     QPointF startingPoint;
 

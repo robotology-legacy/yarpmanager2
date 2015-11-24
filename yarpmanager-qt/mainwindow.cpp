@@ -20,7 +20,7 @@
 #include "moduleviewwidget.h"
 #include "applicationviewwidget.h"
 #include "resourceviewwidget.h"
-#include "genericviewwidget.h"
+
 #include "template_res.h"
 #include "aboutdlg.h"
 
@@ -74,6 +74,8 @@ MainWindow::MainWindow(QWidget *parent) :
     qRegisterMetaType< QVector<int> >("QVector<int>");
     ui->mainToolBar->setContextMenuPolicy(Qt::PreventContextMenu);
     ui->menuBar->setContextMenuPolicy(Qt::PreventContextMenu);
+    builderToolBar = NULL;
+    prevWidget = NULL;
 
 
     connect(ui->entitiesTree,SIGNAL(viewResource(yarp::manager::Computer*)),this,SLOT(viewResource(yarp::manager::Computer*)));
@@ -443,6 +445,7 @@ void MainWindow::viewApplication(yarp::manager::Application *app)
     ApplicationViewWidget *w = new ApplicationViewWidget(app,&lazyManager,&config,ui->mainTabs);
     connect(w,SIGNAL(logError(QString)),this,SLOT(onLogError(QString)));
     connect(w,SIGNAL(logWarning(QString)),this,SLOT(onLogWarning(QString)));
+    connect(w,SIGNAL(builderWindowFloating(bool)),this,SLOT(onBuilderWindowFloating(bool)));
     int index = ui->mainTabs->addTab(w,app->getName());
     ui->mainTabs->setTabIcon(index,QIcon(":/run22.svg"));
     ui->mainTabs->setCurrentIndex(index);
@@ -631,6 +634,26 @@ void MainWindow::onLogMessage(QString msg)
     ui->logWidget->setCurrentRow(ui->logWidget->count() - 1);
 }
 
+void MainWindow::onBuilderWindowFloating(bool floating)
+{
+    if(builderToolBar){
+        removeToolBar(builderToolBar);
+        builderToolBar = NULL;
+    }
+
+    if(!floating){
+        GenericViewWidget *w = (GenericViewWidget*)ui->mainTabs->widget(ui->mainTabs->currentIndex());
+        if(w && w->getType() == yarp::manager::APPLICATION){
+            ApplicationViewWidget *aw = (ApplicationViewWidget*)w;
+            builderToolBar = aw->getBuilderToolBar();
+            if(builderToolBar){
+                addToolBar(builderToolBar);
+                builderToolBar->show();
+            }
+        }
+    }
+}
+
 /*! \brief Called when a tab has been pressed
     \param index the index of the tab
  */
@@ -647,6 +670,30 @@ void MainWindow::onTabChangeItem(int index)
         ui->actionRun->setEnabled(true);
         ui->actionStop->setEnabled(true);
         ui->actionKill->setEnabled(true);
+
+        ApplicationViewWidget *aw = (ApplicationViewWidget*)w;
+        if(builderToolBar){
+            removeToolBar(builderToolBar);
+            builderToolBar = NULL;
+        }
+
+        builderToolBar = aw->getBuilderToolBar();
+        if(builderToolBar){
+            addToolBar(builderToolBar);
+            builderToolBar->show();
+        }
+        if(aw->isBuilderFloating()){
+            aw->showBuilder(true);
+        }
+
+        if(prevWidget && prevWidget != w){
+            if(prevWidget->getType() == yarp::manager::APPLICATION){
+                ApplicationViewWidget *aw = (ApplicationViewWidget*)prevWidget;
+                if(aw->isBuilderFloating()){
+                    aw->showBuilder(false);
+                }
+            }
+        }
     }else{
         if(w && w->getType() == yarp::manager::RESOURCE){
             ui->actionRefresh_Status->setEnabled(true);
@@ -660,7 +707,13 @@ void MainWindow::onTabChangeItem(int index)
         ui->actionRun->setEnabled(false);
         ui->actionStop->setEnabled(false);
         ui->actionKill->setEnabled(false);
+
+        if(builderToolBar){
+            removeToolBar(builderToolBar);
+            builderToolBar = NULL;
+        }
     }
+    prevWidget = w;
 }
 
 /*! \brief Create a new Application */

@@ -82,8 +82,9 @@ void ApplicationItem::init()
         {
             Application* application = (*appItr);
             ApplicationItem *appItem = new ApplicationItem(application,mainAppManager,usedModulesId,true,this);
-            connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-            connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+            //connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            QObject::connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
+            //connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),sigHandler,SLOT(onApplicationSelected(QGraphicsItem*)));
             appItem->setZValue(zValue());
             appItem->init();
 
@@ -218,7 +219,9 @@ void ApplicationItem::init()
                 // TODO
             }else{
                 if(source && dest){
-                    arrow = new Arrow(source, dest, baseCon,id,this);
+
+                    arrow = new Arrow(source, dest, baseCon,id,true,this);
+                    QObject::connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
                     arrow->setColor(QColor(Qt::red));
                     source->addArrow(arrow);
                     dest->addArrow(arrow);
@@ -593,7 +596,7 @@ QVariant ApplicationItem::itemChange(GraphicsItemChange change, const QVariant &
 
         }
 
-        if(snap){
+        if(snap && !isInApp){
             QPointF newPos = value.toPointF();
             QPointF closestPoint = computeTopLeftGridPoint(newPos);
             return closestPoint+=offset;
@@ -621,15 +624,33 @@ void ApplicationItem::setModuleRunning(bool running, int id)
     }
 }
 
+void ApplicationItem::setSelectedConnections(QList<int>selectedIds)
+{
+    foreach (QGraphicsItem *it, itemsList) {
+        if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
+            Arrow *arrow = (Arrow*)it;
+            if(selectedIds.contains(arrow->getId())){
+                arrow->setConnectionSelected(true);
+            }else{
+                arrow->setConnectionSelected(false);
+            }
+        }else
+            if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *app = (ApplicationItem*)it;
+                app->setSelectedConnections(selectedIds);
+            }
+    }
+}
+
 void ApplicationItem::setSelectedModules(QList<int>selectedIds)
 {
     foreach (QGraphicsItem *it, itemsList) {
         if(it->type() == QGraphicsItem::UserType + ModuleItemType){
             ModuleItem *mod = (ModuleItem*)it;
             if(selectedIds.contains(mod->getId())){
-                mod->setSelected(true);
+                mod->setModuleSelected(true);
             }else{
-                mod->setSelected(false);
+                mod->setModuleSelected(false);
             }
         }else
             if(it->type() == QGraphicsItem::UserType + ApplicationItemType){

@@ -17,6 +17,7 @@
 #include <yarp/os/ConstString.h>
 #include <yarp/manager/manager.h>
 #include "entitiestreewidget.h"
+#include "genericviewwidget.h"
 //#include "message_list.h"
 //#include "application_list.h"
 
@@ -50,6 +51,8 @@ private:
     yarp::os::Property config;
 
     EntitiesTreeWidget *entitiesTree;
+    QToolBar *builderToolBar;
+    GenericViewWidget *prevWidget;
 
     string ext_editor;
 
@@ -74,6 +77,7 @@ private slots:
     void onLogMessage(QString);
     void onHelp();
     void onAbout();
+    void onBuilderWindowFloating(bool);
 
 public slots:
     void onTabChangeItem(int);

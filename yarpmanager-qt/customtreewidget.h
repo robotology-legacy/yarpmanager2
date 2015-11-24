@@ -27,6 +27,8 @@ public:
     CustomTreeWidgetItem(QTreeWidget *view, const QStringList &strings, int type = Type) :
         QTreeWidgetItem(view,strings,type){}
 
+    CustomTreeWidgetItem(QTreeWidgetItem *item, const QStringList &strings, int type = Type) :
+        QTreeWidgetItem(item,strings,type){}
     bool operator< (const QTreeWidgetItem &other) const{
         int sortCol = treeWidget()->sortColumn();
         if(sortCol == 1){
@@ -37,6 +39,7 @@ public:
             return QTreeWidgetItem::operator <(other);
         }
     }
+
 };
 
 /*! \class CustomTreeWidget

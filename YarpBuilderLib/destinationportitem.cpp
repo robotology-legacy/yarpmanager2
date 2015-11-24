@@ -173,10 +173,14 @@ QPointF DestinationPortItem::connectionPoint()
 void DestinationPortItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 
+    if(!moved && event->modifiers() == Qt::NoModifier && event->button() == Qt::LeftButton){
+        signalHandler()->newConnectionAdded(connectionPoint(),this);
+    }
     pressed = false;
     moved = false;
-    setZValue(zValue() - 10);
-    QGraphicsItem::mouseReleaseEvent(event);
+    //setZValue(zValue() - 10);
+
+    //QGraphicsItem::mouseReleaseEvent(event);
 }
 
 
@@ -187,7 +191,7 @@ QVariant DestinationPortItem::itemChange(GraphicsItemChange change, const QVaria
         foreach (Arrow *arrow, arrows) {
             arrow->updatePosition();
         }
-        if(snap){
+        if(snap && !isInApp){
             QPointF newPos = value.toPointF();
             QPointF closestPoint = computeTopLeftGridPoint(newPos);
             return closestPoint+=offset;

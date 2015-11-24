@@ -18,6 +18,7 @@ public:
     void setModuleRunning(bool,int);
     void setConnectionConnected(bool connected, QString from, QString to);
     void setSelectedModules(QList<int>selectedIds);
+    void setSelectedConnections(QList<int>selectedIds);
     void setOutputPortAvailable(QString oData, bool available);
     void setInputPortAvailable(QString iData, bool available);
 
@@ -31,6 +32,7 @@ private:
 
     BuilderItem* addModule(Module *module, int moduleId);
     qreal minx,miny,maxw,maxh;
+
 
 
 
@@ -51,6 +53,8 @@ private:
     Manager *mainAppManager;
     int index;
     QList <QGraphicsItem*> itemsList;
+
+
 
 };
 

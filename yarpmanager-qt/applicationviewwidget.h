@@ -60,6 +60,9 @@ public:
     void onError(void);
     void onLoadBalance(void);
     void closeManager();
+    QToolBar* getBuilderToolBar();
+    bool isBuilderFloating();
+    void showBuilder(bool);
 
 
 private:
@@ -153,7 +156,12 @@ private slots:
     void onSelfStop(int which);
 
     void onRefreshApplication();
+    void onModuleSelected(QList<int> ids);
+    void onConnectionSelected(QList<int> id);
     //void onBuilderFloatingChanged(bool);
+
+    void onModuleItemChanged(QTreeWidgetItem*,int);
+    void onBuilderFloatChanged(bool);
 
 signals:
     void logWarning(QString);
@@ -166,6 +174,7 @@ signals:
     void selfResUnavailable(int);
     void selfStart(int);
     void selfStop(int);
+    void builderWindowFloating(bool);
 
 };
 

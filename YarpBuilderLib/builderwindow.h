@@ -39,6 +39,7 @@ public:
     void refresh();
 
     void setSelectedModules(QList<int>selectedIds);
+    void setSelectedConnections(QList<int>selectedIds);
 
     //BuilderItem* addModule(QString itemName, QStringList inputPorts, QStringList outputPorts , QPointF pos, BuilderItem * parent = 0);
     BuilderItem* addModule(Module *module, int moduleId);
@@ -47,13 +48,22 @@ public:
 
     QToolBar *getToolBar();
 
+    void removeToolBar();
+    void addToolBar();
+    void addModulesAction(QAction*);
+    void addConnectionsAction(QAction*);
+
 private:
 
+    bool isApplicationPresent(Application *application);
+    bool isModulePresent(Module *module);
     void initModuleTab(ModuleItem *it);
     void findInputOutputData(Connection& cnn,  ModulePContainer &modules,
                              InputData* &input_, OutputData* &output_, QString *inModulePrefix, QString *outModulePrefix);
     PortItem* findModelFromOutput(OutputData* output, QString modulePrefix);
     PortItem* findModelFromInput(InputData* input, QString modulePrefix);
+    QList <QAction*> modulesAction;
+    QList <QAction*> connectionsAction;
 
 private:
     //BuilderUi::BuilderWindow *ui;
@@ -73,11 +83,17 @@ private:
 
 signals:
     void refreshApplication();
+    void setModuleSelected(QList<int>);
+    void setConnectionSelected(QList<int>);
 
 private slots:
+    void onZoomIn();
+    void onZoomOut();
     void onRestoreZoom();
     void onSnap(bool);
+    void onShowGrid(bool);
     void onModuleSelected(QGraphicsItem *it);
+    void onConnectionSelected(QGraphicsItem *it);
     void onApplicationSelected(QGraphicsItem* it);
     void initApplicationTab(ApplicationItem *application = NULL);
     void onAddedModule(void*, QPointF pos);
@@ -169,11 +185,29 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event)
     {
         QGraphicsItem *it = itemAt(event->pos());
+        if(!it){
+            return;
+        }
 
         QMenu menu(this);
         QAction *copyAction = menu.addAction("Copy");
         QAction *pasteAction = menu.addAction("Paste");
         QAction *deleteAction = menu.addAction("Delete");
+        menu.addSeparator();
+
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType ||
+           it->type() == QGraphicsItem::UserType + ConnectionItemType){
+            BuilderItem *bItem = (BuilderItem*)it;
+
+            foreach(QAction *act, bItem->getActions()){
+                menu.addAction(act);
+            }
+        }
+
+        if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+            qDebug() <<  "Context on Application";
+        }
+
 
         if(!it){
             copyAction->setEnabled(false);
@@ -397,6 +431,7 @@ private:
     QList <QGraphicsItem*>copiedItems;
 signals:
     void pressedNullItem();
+
 
 
 };

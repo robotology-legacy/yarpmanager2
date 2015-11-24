@@ -26,9 +26,11 @@ signals:
     void addNewConnection(QPointF,QGraphicsItem *it);
     void requestNewConnection(QPointF,QGraphicsItem *it);
     void moduleSelected(QGraphicsItem *it);
+    void connectctionSelected(QGraphicsItem *it);
     void applicationSelected(QGraphicsItem *it);
 
 public slots:
+    void onConnectionSelected(QGraphicsItem *it);
     void onModuleSelected(QGraphicsItem *it);
     void onConnectionComboChanged(QString);
     void onEditingFinished();
