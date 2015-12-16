@@ -59,7 +59,7 @@
          </font>
         </property>
         <property name="text">
-         <string>1.0</string>
+         <string>2.0</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>

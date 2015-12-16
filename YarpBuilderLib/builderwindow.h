@@ -39,7 +39,6 @@ public:
 
 
     void load(bool refresh = false);
-    void refresh();
     void save();
 
     void setSelectedModules(QList<int>selectedIds);
@@ -47,11 +46,13 @@ public:
 
     //BuilderItem* addModule(QString itemName, QStringList inputPorts, QStringList outputPorts , QPointF pos, BuilderItem * parent = 0);
     BuilderItem *addModule(Module *module, int moduleId);
-    BuilderItem *addSourcePort(QString name);
-    BuilderItem * addDestinantionPort(QString name);
+    BuilderItem *addSourcePort(QString name, bool editOnStart = false);
+    BuilderItem * addDestinantionPort(QString name, bool editOnStart = false);
     ApplicationItem* addApplication(Application *app);
     void setOutputPortAvailable(QString, bool);
     void setInputPortAvailable(QString, bool);
+    QString getFileName();
+    QString getAppName();
 
     QToolBar *getToolBar();
 
@@ -105,6 +106,7 @@ signals:
     void modified(bool);
 
 private slots:
+    void onModified();
     void onZoomIn();
     void onZoomOut();
     void onRestoreZoom();
@@ -222,7 +224,7 @@ protected:
         QGraphicsItem *it = itemAt(event->pos());
         if(!it){
             QAction *addSourcePortAction = menu.addAction("Add Source Port");
-            QAction *addDestinationPortAction = menu.addAction("Add Source Port");
+            QAction *addDestinationPortAction = menu.addAction("Add Destination Port");
 
             QAction *act = menu.exec(event->globalPos());
             if(act == addSourcePortAction){
@@ -315,6 +317,7 @@ private:
         foreach (QGraphicsItem* item, selectedItems) {
             if(item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
                 selectedItems.removeOne(item);
+                ((Arrow*)item)->deleteConnection();
                 delete item;
             }
 

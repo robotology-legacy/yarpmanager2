@@ -165,7 +165,7 @@ void ApplicationItem::init()
                     }
                 }
                 if(!bExist){
-                    sourcePort = new SourcePortItem((*citr).from(),true,this);
+                    sourcePort = new SourcePortItem((*citr).from(),true,NULL,this);
                     itemsList.append(sourcePort);
                     //scene->addItem(sourcePort);
                     source = sourcePort;
@@ -201,7 +201,7 @@ void ApplicationItem::init()
                     }
                 }
                 if(!bExist){
-                    destPort = new DestinationPortItem((*citr).to(),true,this);
+                    destPort = new DestinationPortItem((*citr).to(),true,false,this);
                     itemsList.append(destPort);
                     dest = destPort;
 
@@ -227,7 +227,7 @@ void ApplicationItem::init()
             }else{
                 if(source && dest){
 
-                    arrow = new Arrow(source, dest, baseCon,id,true,this);
+                    arrow = new Arrow(source, dest, baseCon,id,NULL,true,this);
                     QObject::connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
                     arrow->setColor(QColor(Qt::red));
                     source->addArrow(arrow);

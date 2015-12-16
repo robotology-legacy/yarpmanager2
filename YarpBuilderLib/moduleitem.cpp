@@ -39,9 +39,9 @@ ModuleItem::ModuleItem(Module *module, int moduleId, bool isInApp,BuilderItem * 
 //        outputPorts << QString("%1").arg(out.getName());
 //    }
 
-    if(module->getModelBase().points.size()>0){
-        startingPoint = QPointF(module->getModelBase().points[0].x,module->getModelBase().points[0].y);
-    }
+//    if(module->getModelBase().points.size()>0){
+//        startingPoint = QPointF(module->getModelBase().points[0].x,module->getModelBase().points[0].y);
+//    }
 
 
 
@@ -78,7 +78,7 @@ void ModuleItem::init()
     int textWidth = fontMetric.width(itemName);
 
     prepareGeometryChange();
-    mainRect = QRect(-((2*PORT_TEXT_WIDTH) + textWidth)/2,
+    mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,
                      -20,
                      ((2*PORT_TEXT_WIDTH) + textWidth),
                      40);
@@ -107,8 +107,6 @@ void ModuleItem::init()
     }
 
     if(module->outputCount() > 0){
-        //prepareGeometryChange();
-        //boundingR.setWidth(mainRect.width() + PORT_LINE_WIDTH);
         for(int i=0;i<module->outputCount();i++){
             oPorts.append(new PortItem(&module->getOutputAt(i),this));
         }
@@ -124,6 +122,8 @@ void ModuleItem::init()
             boundingR.setHeight(mainRect.height());
         }
     }
+
+    qDebug() << mainRect;
 
 
     if(!isInApp){
@@ -159,20 +159,26 @@ void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
 {
     //painter->fillRect(boundingR,QBrush(Qt::red));
     //Input Ports
-    qreal partialH = mainRect.height()/(module->inputCount() + 1);
+    qreal partialH = (qreal)mainRect.height()/(qreal)((qreal)module->inputCount() + 1.0);
     for(int i=0; i < module->inputCount(); i++){
         painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
-        painter->drawLine(mainRect.x() - PORT_LINE_WIDTH, mainRect.y() + ((i+1) * partialH ),mainRect.x() , mainRect.y() + ((i+1) * partialH ));
+        painter->drawLine(QPointF(mainRect.x() - PORT_LINE_WIDTH, mainRect.y() + ((i+1) * partialH )),
+                          QPointF(mainRect.x() , mainRect.y() + ((i+1) * partialH )));
         PortItem *it = iPorts.at(i);
         it->setPos(mainRect.x() - PORT_LINE_WIDTH,mainRect.y() + ((i+1) * partialH ));
     }
 
     //Output Ports ?????????
-    partialH = mainRect.height()/(module->outputCount() + 1);
+    partialH = (qreal)mainRect.height()/(qreal)((qreal)module->outputCount() + 1.0);
     for(int i=0; i < module->outputCount(); i++){
         painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
-        painter->drawLine(mainRect.x() + mainRect.width() , mainRect.y() + ((i+1) * partialH ),
-                          mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + ((i+1) * partialH ));
+
+        painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + ((i+1) * partialH )),
+                          QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + ((i+1) * partialH )));
+
+
+
+
         PortItem *it = oPorts.at(i);
         it->setPos(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH,mainRect.y() + ((i+1) * partialH ));
     }
@@ -202,8 +208,6 @@ void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
 
     painter->drawPath(path);
 
-//    painter->setBrush(QBrush(QColor(Qt::red)));
-//    painter->drawRect(-10,-10,20,20);
 
 
     //TEXT

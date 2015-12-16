@@ -29,6 +29,8 @@ void BuilderItem::removeArrow(Arrow *arrow){
 
     if (index != -1)
         arrows.removeAt(index);
+
+
 }
 
 bool BuilderItem::arrowAlreadyPresent(BuilderItem *endItem)

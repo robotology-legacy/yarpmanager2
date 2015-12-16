@@ -69,6 +69,8 @@ public:
     void showBuilder(bool);
 
     void save();
+    QString getFileName();
+    QString getAppName();
 
 
 private:

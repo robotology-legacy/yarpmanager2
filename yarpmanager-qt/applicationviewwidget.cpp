@@ -149,7 +149,25 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,
 
 void ApplicationViewWidget::save()
 {
-    builder->save();
+    if(builder){
+        builder->save();
+    }
+}
+
+QString ApplicationViewWidget::getFileName()
+{
+    if(builder){
+        return builder->getFileName();
+    }
+    return "";
+}
+
+QString ApplicationViewWidget::getAppName()
+{
+    if(builder){
+        return builder->getAppName();
+    }
+    return "";
 }
 
 ApplicationViewWidget::~ApplicationViewWidget()

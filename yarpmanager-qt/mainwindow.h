@@ -57,7 +57,6 @@ private:
 
     string ext_editor;
 
-    NewApplicationWizard newApplicationWizard;
 
 private slots:
     void onSave();

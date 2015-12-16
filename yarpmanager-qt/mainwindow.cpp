@@ -73,7 +73,7 @@ bool isAbsolute(const char *path) {  //copied from yarp_OS ResourceFinder.cpp
 }
 
 MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent), newApplicationWizard(&config),
+    QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
@@ -120,7 +120,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
     connect(this,SIGNAL(selectItem(QString)),ui->entitiesTree,SLOT(onSelectItem(QString)));
-    //connect(&newApplicationWizard,SIGNAL(wizardError(QString)),this,SLOT(onWizardError(QString)));
 
     onTabChangeItem(-1);
 
@@ -763,41 +762,43 @@ void MainWindow::onTabChangeItem(int index)
 /*! \brief Create a new Application */
 void MainWindow::onNewApplication()
 {
-    newApplicationWizard.setWindowTitle("Create New Application");
-    if(newApplicationWizard.exec() == QDialog::Accepted){
-        qDebug() << "Accepted " << newApplicationWizard.name;
+    NewApplicationWizard *newApplicationWizard = new NewApplicationWizard(&config);
+    newApplicationWizard->setWindowTitle("Create New Application");
+    if(newApplicationWizard->exec() == QDialog::Accepted){
+        qDebug() << "Accepted " << newApplicationWizard->name;
 
-        QFile f(newApplicationWizard.fileName);
+        QFile f(newApplicationWizard->fileName);
         if(!f.open(QIODevice::WriteOnly)){
             yarp::manager::ErrorLogger* logger  = yarp::manager::ErrorLogger::Instance();
-            logger->addError(QString("Cannot create %1").arg(newApplicationWizard.fileName.toLatin1().data()).toLatin1().data());
+            logger->addError(QString("Cannot create %1").arg(newApplicationWizard->fileName.toLatin1().data()).toLatin1().data());
             reportErrors();
+            delete newApplicationWizard;
             return;
         }
 
         QString s  = "<application>\n"
-                     "      <name>" + newApplicationWizard.name + "</name>\n"
-                     "      <description>" + newApplicationWizard.description + "</description>\n"
-                     "      <version>" + newApplicationWizard.version + "</version>\n"
+                     "      <name>" + newApplicationWizard->name + "</name>\n"
+                     "      <description>" + newApplicationWizard->description + "</description>\n"
+                     "      <version>" + newApplicationWizard->version + "</version>\n"
                      "      <authors>\n"
                      "      </authors>\n"
                      "</application>\n";
         f.write(s.toLatin1());
         f.close();
 
-        if(lazyManager.addApplication(newApplicationWizard.fileName.toLatin1().data(),
-                                      newApplicationWizard.name.toLatin1().data(),
-                                      254)){
+        if(lazyManager.addApplication(newApplicationWizard->fileName.toLatin1().data(),
+                                      newApplicationWizard->name.toLatin1().data())){
 
-            syncApplicationList(newApplicationWizard.name);
+            syncApplicationList(newApplicationWizard->name);
 
         } else {
             reportErrors();
         }
 
-
+        delete newApplicationWizard;
         return;
     }
+    delete newApplicationWizard;
     qDebug() << "Rejected";
 //    yarp::manager::ErrorLogger* logger  = yarp::manager::ErrorLogger::Instance();
 
@@ -951,6 +952,7 @@ void MainWindow::onSave()
     if(type == yarp::manager::APPLICATION){
         ApplicationViewWidget *ww = (ApplicationViewWidget*)w;
         ww->save();
+        onReopenApplication(ww->getAppName(),ww->getFileName());
     }
 }
 
@@ -1004,7 +1006,7 @@ void MainWindow::onRemoveApplication(QString appName)
 void MainWindow::onReopenApplication(QString appName,QString fileName)
 {
     lazyManager.removeApplication(appName.toLatin1().data());
-    lazyManager.addApplication(fileName.toLatin1().data(),appName.toLatin1().data(),254);
+    lazyManager.addApplication(fileName.toLatin1().data(),appName.toLatin1().data());
     syncApplicationList();
 }
 

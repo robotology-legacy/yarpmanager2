@@ -39,6 +39,7 @@ void BuilderScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
 
 void BuilderScene::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
+    qDebug() << "dropEvent";
     qlonglong pointer = event->mimeData()->data("pointer").toLongLong();
     QString itemType = event->mimeData()->text();
 
@@ -81,7 +82,7 @@ void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
         return;
     }
     event->setAccepted(true);
-    //qDebug() << "Drag Move";
+    qDebug() << "Drag Move";
 }
 
 void BuilderScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -180,6 +181,7 @@ void BuilderScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void BuilderScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    //qDebug() << "mouseMoveEvent";
     if(currentLine){
         //qDebug() << startingPoint.x() << " || " << startingPoint.y() << " || " << QCursor::pos().x() << " || " << QCursor::pos().y();
         currentLine->setLine(startingPoint.x(),startingPoint.y(),event->scenePos().x(),event->scenePos().y());

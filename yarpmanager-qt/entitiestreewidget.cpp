@@ -56,8 +56,10 @@ EntitiesTreeWidget::EntitiesTreeWidget(QWidget *parent) : QTreeWidget(parent)
     separator->setSeparator(true);
     reopen = new QAction("Refresh",this);
     remove = new QAction("Remove",this);
+    editApplication = new QAction("Edit",this);
 
     secondLevelMenu.addAction(loadFiles);
+    secondLevelMenu.addAction(editApplication);
     secondLevelMenu.addAction(separator);
     secondLevelMenu.addAction(reopen);
     secondLevelMenu.addAction(remove);
@@ -66,6 +68,7 @@ EntitiesTreeWidget::EntitiesTreeWidget(QWidget *parent) : QTreeWidget(parent)
     leafLevelMenu.addAction(edit);
 
     connect(loadFiles,SIGNAL(triggered()),this,SLOT(onLoadFile()));
+    connect(editApplication,SIGNAL(triggered()),this,SLOT(onEditApplication()));
     connect(openFile,SIGNAL(triggered()),this,SIGNAL(openFiles()));
     connect(importFile,SIGNAL(triggered()),this,SIGNAL(importFiles()));
     connect(edit,SIGNAL(triggered()),this,SLOT(onEdit()));
@@ -270,16 +273,17 @@ void EntitiesTreeWidget::mouseMoveEvent(QMouseEvent *event)
 
         QDrag *drag = new QDrag(this);
         drag->setMimeData(mimeData);
-        QPixmap pix(textWidth + 40,18);
-        QPainter painter(&pix);
-        QPen pen(QBrush(QColor((Qt::blue))),1);
-        painter.setPen(pen);
-        painter.fillRect(0,0,textWidth + 40,18,QBrush(QColor((Qt::lightGray))));
-        painter.drawRect(0,0,textWidth- + 39,17);
-        painter.drawImage(QRectF(1,1,16,16),QImage(":/module22.svg"));
-        painter.drawText(QRectF(16,1,textWidth + 20,16),Qt::AlignCenter,selectedItem->text(0));
-        //pix.fill(QColor(Qt::red));
-        drag->setPixmap(pix);
+
+//        QPixmap pix(textWidth + 40,18);
+//        QPainter painter(&pix);
+//        QPen pen(QBrush(QColor((Qt::blue))),1);
+//        painter.setPen(pen);
+//        painter.fillRect(0,0,textWidth + 40,18,QBrush(QColor((Qt::lightGray))));
+//        painter.drawRect(0,0,textWidth- + 39,17);
+//        painter.drawImage(QRectF(1,1,16,16),QImage(":/module22.svg"));
+//        painter.drawText(QRectF(16,1,textWidth + 20,16),Qt::AlignCenter,selectedItem->text(0));
+//        //pix.fill(QColor(Qt::red));
+//        drag->setPixmap(pix);
 
 
         drag->exec(Qt::CopyAction);
@@ -414,6 +418,23 @@ void EntitiesTreeWidget::onContext(QPoint p)
             secondLevelMenu.exec(mapToGlobal(pp));
         }else{
             leafLevelMenu.exec(mapToGlobal(pp));
+        }
+    }
+}
+
+
+void EntitiesTreeWidget::onEditApplication()
+{
+    QTreeWidgetItem *it = currentItem();
+
+    if(!it){
+        return;
+    }
+
+    if(it->parent() == applicationNode){
+        if(it->data(0,Qt::UserRole)  == yarp::manager::APPLICATION){
+            yarp::manager::Application *app = (yarp::manager::Application*)it->data(0,Qt::UserRole + 1).toLongLong();
+            viewApplication(app,true);
         }
     }
 }

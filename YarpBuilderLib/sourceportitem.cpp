@@ -6,7 +6,7 @@
 #include <QLineEdit>
 
 
-SourcePortItem::SourcePortItem(QString itemName, bool isInApp, BuilderItem *parent) : BuilderItem(parent)
+SourcePortItem::SourcePortItem(QString itemName, bool isInApp, QList <QGraphicsItem*> *itemsList, bool editOnStart, BuilderItem *parent) : BuilderItem(parent)
 {
     itemType = SourcePortItemType;
     this->itemName = itemName;
@@ -16,13 +16,13 @@ SourcePortItem::SourcePortItem(QString itemName, bool isInApp, BuilderItem *pare
     pressed = false;
     moved = false;
     this->isInApp = isInApp;
-
+    this->itemsList = itemsList;
 
     QFontMetrics fontMetric(font);
     int textWidth = fontMetric.width(itemName);
 
     prepareGeometryChange();
-    mainRect = QRect(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
+    mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
     boundingR = QRectF(mainRect);
     setToolTip(itemName);
 
@@ -43,9 +43,14 @@ SourcePortItem::SourcePortItem(QString itemName, bool isInApp, BuilderItem *pare
     lineEditWidget = new QGraphicsProxyWidget(this);
     QLineEdit *lineEdit = new QLineEdit();
     QObject::connect(lineEdit,SIGNAL(editingFinished()),signalHandler(),SLOT(onEditingFinished()));
+    QObject::connect(lineEdit,SIGNAL(returnPressed()),signalHandler(),SLOT(onEditingFinished()));
     lineEdit->setText(itemName);
     lineEditWidget->setWidget(lineEdit);
-    lineEditWidget->setVisible(false);
+    if(editOnStart){
+        lineEditWidget->setVisible(true);
+    }else{
+        lineEditWidget->setVisible(false);
+    }
     QRectF geo = lineEditWidget->geometry();
     geo.setWidth(textWidth);
     lineEditWidget->setGeometry(geo);
@@ -102,7 +107,7 @@ void SourcePortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
         painter->drawText(mainRect,Qt::AlignCenter,itemName);
     }else{
         if(!isSelected()){
-            editingFinished();
+            //editingFinished();
             painter->setPen(QPen(QBrush(QColor(Qt::black)),1));
             painter->drawText(mainRect,Qt::AlignCenter,itemName);
         }
@@ -113,6 +118,23 @@ void SourcePortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
 void SourcePortItem::editingFinished()
 {
     QString text = ((QLineEdit*)lineEditWidget->widget())->text();
+
+    if(itemsList){
+        for (int i=0;i<itemsList->count();i++){
+            QGraphicsItem *it = itemsList->at(i);
+            if(((BuilderItem*)it)->type() == QGraphicsItem::UserType + SourcePortItemType && it != this){
+                if(((SourcePortItem*)it)->getItemName() == text){
+                    ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,0,0);");
+                    allowOutputs = false;
+                    return;
+                }
+            }
+        }
+    }
+    allowOutputs = true;
+
+    ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,255,255);");
+
     this->itemName = text;
     lineEditWidget->setVisible(false);
 
@@ -120,7 +142,7 @@ void SourcePortItem::editingFinished()
     int textWidth = fontMetric.width(itemName);
 
     prepareGeometryChange();
-    mainRect = QRect(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
+    mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
     boundingR = QRectF(mainRect);
     setToolTip(itemName);
 
@@ -128,6 +150,7 @@ void SourcePortItem::editingFinished()
     geo.setWidth(textWidth);
     lineEditWidget->setGeometry(geo);
     lineEditWidget->setPos(-textWidth/2,-lineEditWidget->geometry().height()/2);
+    signalHandler()->modified();
 
     update();
     updateConnections();
@@ -151,7 +174,6 @@ void SourcePortItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
     setZValue(zValue() + 10);
-    editingFinished();
     QGraphicsItem::mousePressEvent(event);
 }
 

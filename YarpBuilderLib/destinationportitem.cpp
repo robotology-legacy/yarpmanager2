@@ -6,7 +6,7 @@
 #include <QLineEdit>
 
 
-DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, BuilderItem *parent) : BuilderItem(parent)
+DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<QGraphicsItem *> *itemsList,bool editOnStart, BuilderItem *parent) : BuilderItem(parent)
 {
     itemType = DestinationPortItemType;
     this->itemName = itemName;
@@ -15,12 +15,13 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, Builder
     pressed = false;
     moved = false;
     this->isInApp = isInApp;
+    this->itemsList = itemsList;
 
     QFontMetrics fontMetric(font);
     int textWidth = fontMetric.width(itemName);
 
     prepareGeometryChange();
-    mainRect = QRect(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
+    mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
 
     boundingR = QRectF(mainRect);
 
@@ -43,9 +44,14 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, Builder
     lineEditWidget = new QGraphicsProxyWidget(this);
     QLineEdit *lineEdit = new QLineEdit();
     QObject::connect(lineEdit,SIGNAL(editingFinished()),signalHandler(),SLOT(onEditingFinished()));
+    QObject::connect(lineEdit,SIGNAL(returnPressed()),signalHandler(),SLOT(onEditingFinished()));
     lineEdit->setText(itemName);
     lineEditWidget->setWidget(lineEdit);
-    lineEditWidget->setVisible(false);
+    if(editOnStart){
+        lineEditWidget->setVisible(true);
+    }else{
+        lineEditWidget->setVisible(false);
+    }
     QRectF geo = lineEditWidget->geometry();
     geo.setWidth(textWidth);
     lineEditWidget->setGeometry(geo);
@@ -98,7 +104,6 @@ void DestinationPortItem::paint(QPainter *painter, const QStyleOptionGraphicsIte
         painter->drawText(mainRect,Qt::AlignCenter,itemName);
     }else{
         if(!isSelected()){
-            editingFinished();
             painter->setPen(QPen(QBrush(QColor(Qt::black)),1));
             painter->drawText(mainRect,Qt::AlignCenter,itemName);
         }
@@ -109,6 +114,24 @@ void DestinationPortItem::paint(QPainter *painter, const QStyleOptionGraphicsIte
 void DestinationPortItem::editingFinished()
 {
     QString text = ((QLineEdit*)lineEditWidget->widget())->text();
+
+    if(itemsList){
+        for (int i=0;i<itemsList->count();i++){
+            QGraphicsItem *it = itemsList->at(i);
+            if(((BuilderItem*)it)->type() == QGraphicsItem::UserType + DestinationPortItemType && it != this){
+                if(((DestinationPortItem*)it)->getItemName() == text){
+                    ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,0,0);");
+                    allowOutputs = false;
+                    return;
+                }
+            }
+        }
+    }
+    allowOutputs = true;
+
+    ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,255,255);");
+
+
     this->itemName = text;
     lineEditWidget->setVisible(false);
 
@@ -116,7 +139,7 @@ void DestinationPortItem::editingFinished()
     int textWidth = fontMetric.width(itemName);
 
     prepareGeometryChange();
-    mainRect = QRect(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
+    mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
     boundingR = QRectF(mainRect);
     setToolTip(itemName);
 
@@ -125,8 +148,8 @@ void DestinationPortItem::editingFinished()
     lineEditWidget->setGeometry(geo);
     lineEditWidget->setPos(-textWidth/2,-lineEditWidget->geometry().height()/2);
 
-    update();
     updateConnections();
+    update();
 }
 
 
@@ -158,8 +181,7 @@ void DestinationPortItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 void DestinationPortItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
-    setZValue(zValue() + 10);
-    editingFinished();
+    //setZValue(zValue() + 10);
     QGraphicsItem::mousePressEvent(event);
 }
 
@@ -180,7 +202,7 @@ void DestinationPortItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     moved = false;
     //setZValue(zValue() - 10);
 
-    //QGraphicsItem::mouseReleaseEvent(event);
+    QGraphicsItem::mouseReleaseEvent(event);
 }
 
 

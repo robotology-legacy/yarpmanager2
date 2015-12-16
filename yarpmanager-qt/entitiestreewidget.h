@@ -54,6 +54,7 @@ private:
     QAction *openFile;
     QAction *importFile;
     QAction *loadFiles;
+    QAction *editApplication;
     QAction *reopen;
     QAction *remove;
     QAction *edit;
@@ -77,6 +78,7 @@ public slots:
     void onSelectItem(QString);
     void onContext(QPoint);
     void onLoadFile();
+    void onEditApplication();
     void onEdit();
     void onRemove();
     void onReopen();

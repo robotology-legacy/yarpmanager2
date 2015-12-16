@@ -87,6 +87,22 @@ void BuilderWindow::save()
     modified(m_modified);
 }
 
+QString BuilderWindow::getFileName()
+{
+    Application* application = manager.getKnowledgeBase()->getApplication();
+    if(!application)
+        return "";
+    return QString(application->getXmlFile());
+}
+
+QString BuilderWindow::getAppName()
+{
+    Application* application = manager.getKnowledgeBase()->getApplication();
+    if(!application)
+        return "";
+    return QString(application->getName());
+}
+
 void BuilderWindow::prepareManagerFrom(Manager* lazy,
                                            const char* szAppName)
 {
@@ -185,110 +201,7 @@ void BuilderWindow::setConnectionConnected(bool connected, QString from, QString
     }
 }
 
-void BuilderWindow::refresh()
-{
-    Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
-    ModulePContainer modules = safeManager->getKnowledgeBase()->getModules(mainApplication);
-    CnnContainer connections = safeManager->getKnowledgeBase()->getConnections(mainApplication);
-    ApplicaitonPContainer applications = safeManager->getKnowledgeBase()->getApplications(mainApplication);
-    /*************************************/
-    ExecutablePContainer exes = safeManager->getExecutables();
-    ExecutablePIterator moditr;
 
-    //CnnContainer connections = safeManager->getConnections();
-
-    /*************************************/
-
-    QList <int> usedModulesId;
-    ApplicationPIterator appItr;
-    for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
-    {
-        Application* application = (*appItr);
-        bool found = false;
-        for (int i=0; i < itemsList.count();i++) {
-            BuilderItem *sceneItem = (BuilderItem*)itemsList.at(i);
-            if(sceneItem->type() == QGraphicsItem::UserType + ApplicationItemType){
-                ApplicationItem *oldAppItem = (ApplicationItem*)sceneItem;
-                if(oldAppItem->getInnerApplication()->getLabel() == application->getLabel()){
-                    found = true;
-                    break;
-                }
-
-            }else{
-                continue;
-            }
-        }
-        if(found){
-            continue;
-        }
-
-        ApplicationItem *appItem = new ApplicationItem(application,safeManager,&usedModulesId);
-        connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-        connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
-        connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
-        scene->addItem(appItem);
-        appItem->init();
-        appItem->setZValue(0);
-        appItem->setPos(application->getModelBase().points[0].x,
-                        application->getModelBase().points[0].y);
-
-        itemsList.append(appItem);
-    }
-
-    /******************************************************/
-
-    ModulePIterator itr;
-    for(itr=modules.begin(); itr!=modules.end(); itr++){
-        Module* module = (*itr);
-        QString modLabel = module->getLabel();
-
-        bool found = false;
-        for (int i=0; i < itemsList.count();i++) {
-            BuilderItem *sceneItem = (BuilderItem*)itemsList.at(i);
-            if(sceneItem->type() == QGraphicsItem::UserType + ModuleItemType){
-                ModuleItem *oldModItem = (ModuleItem*)sceneItem;
-                if(oldModItem->getInnerModule()->getLabel() == module->getLabel()){
-                    found = true;
-                    break;
-                }
-
-            }else{
-                continue;
-            }
-        }
-        if(found){
-            continue;
-        }
-
-
-        QString moduleId;
-        for(moditr=exes.begin(); moditr<exes.end(); moditr++){
-            QString label = QString("%1").arg((*moditr)->getModule()->getLabel());
-            QString id = QString("%1").arg((*moditr)->getID());
-
-            if(modLabel == label){
-
-                bool idFound = false;
-                foreach (int usedId, usedModulesId) {
-                    if(usedId == id.toInt()){
-                        idFound = true;
-                    }
-                }
-                if(!idFound){
-                    usedModulesId.append(id.toInt());
-                    moduleId = id;
-                    break;
-                }
-              }
-        }
-        addModule(module,moduleId.toInt());
-    }
-
-    /*************************************************************/
-
-
-
-}
 
 bool BuilderWindow::isApplicationPresent(Application *application)
 {
@@ -325,9 +238,6 @@ void BuilderWindow::load(bool refresh)
 {
     index = 0;
 
-    if(editingMode){
-        return;
-    }
 
     usedModulesId.clear();
 
@@ -444,7 +354,6 @@ void BuilderWindow::load(bool refresh)
                 dest = findModelFromInput(input,inModulePrefix);
             }else{
                 bool bExist = false;
-                DestinationPortItem *destPort = NULL;
                 for(int i=0;i<itemsList.count() && !bExist;i++){
                     if(itemsList.at(i)->type() == (QGraphicsItem::UserType + DestinationPortItemType)){
                         DestinationPortItem *auxDestPort = (DestinationPortItem*)itemsList.at(i);
@@ -460,8 +369,7 @@ void BuilderWindow::load(bool refresh)
                     }
                 }
                 if(!bExist){
-                    destPort = (DestinationPortItem*)addDestinantionPort((*citr).to());
-                    dest = destPort;
+                    dest = (DestinationPortItem*)addDestinantionPort((*citr).to());
 
                     size_t size = model.points.size();
                     if(size > 2){
@@ -482,7 +390,7 @@ void BuilderWindow::load(bool refresh)
                 // TODO
             }else{
                 if(source && dest){
-                    arrow = new Arrow(source, dest, baseCon,id);
+                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager);
                     arrow->setActions(connectionsAction);
                     connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
                     arrow->setColor(QColor(Qt::red));
@@ -508,13 +416,13 @@ void BuilderWindow::load(bool refresh)
 
 void BuilderWindow::onAddSourcePort(QString name,QPointF pos)
 {
-    BuilderItem *it = addSourcePort(name);
+    BuilderItem *it = addSourcePort(name,true);
     it->setPos(pos);
 }
 
 void BuilderWindow::onAddDestinationPort(QString name,QPointF pos)
 {
-    BuilderItem *it = addDestinantionPort(name);
+    BuilderItem *it = addDestinantionPort(name,true);
     it->setPos(pos);
 }
 
@@ -558,20 +466,28 @@ void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 //    return it;
 //}
 
-BuilderItem * BuilderWindow::addDestinantionPort(QString name)
+BuilderItem * BuilderWindow::addDestinantionPort(QString name, bool editOnStart)
 {
-    DestinationPortItem *destPort = new DestinationPortItem(name);
+    DestinationPortItem *destPort = new DestinationPortItem(name,false,&itemsList,editOnStart);
     connect(destPort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
+    connect(destPort->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
     itemsList.append(destPort);
 
     scene->addItem(destPort);
     return destPort;
 }
 
-BuilderItem * BuilderWindow::addSourcePort(QString name)
+void BuilderWindow::onModified()
 {
-    SourcePortItem *sourcePort = new SourcePortItem(name);
+    m_modified = true;
+    modified(true);
+}
+
+BuilderItem * BuilderWindow::addSourcePort(QString name, bool editOnStart)
+{
+    SourcePortItem *sourcePort = new SourcePortItem(name,false,&itemsList,editOnStart);
     connect(sourcePort->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
+    connect(sourcePort->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
 
     itemsList.append(sourcePort);
     scene->addItem(sourcePort);
