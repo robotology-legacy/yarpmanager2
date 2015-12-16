@@ -3,46 +3,43 @@
 #include <QHBoxLayout>
 #include <QSplitter>
 
-BuilderWindow::BuilderWindow(Application *app, Manager *lazyManager, SafeManager *safeManager,  QWidget *parent) :
+
+
+BuilderWindow::BuilderWindow(Application *app, Manager *lazyManager, SafeManager *safeManager, bool editingMode, QWidget *parent) :
     QWidget(parent)/*,
     ui(new Ui::BuilderWindow)*/
 {
+
     //ui->setupUi(this);
+    this->editingMode = editingMode;
     this->lazyManager = lazyManager;
     this->app = app;
     this->safeManager = safeManager;
 
+    init();
+
+}
+
+void BuilderWindow::init()
+{
     scene = new BuilderScene(this);
     scene->setSceneRect(QRectF(0, 0, 2000, 2000));
     scene->setBackgroundBrush(QPixmap(":/images/background2.png"));
     connect(scene,SIGNAL(addedModule(void*,QPointF)),this,SLOT(onAddedModule(void*,QPointF)));
+    connect(scene,SIGNAL(addedApplication(void*,QPointF)),this,SLOT(onAddedApplication(void*,QPointF)));
     connect(scene,SIGNAL(addNewConnection(void*,void*))
             ,this,SLOT(onAddNewConnection(void*,void*)));
 
     view = new MyView();
     connect(view,SIGNAL(pressedNullItem()),this,SLOT(initApplicationTab()));
+    connect(view,SIGNAL(addSourcePort(QString,QPointF)),this,SLOT(onAddSourcePort(QString,QPointF)));
+    connect(view,SIGNAL(addDestinationPort(QString,QPointF)),this,SLOT(onAddDestinationPort(QString,QPointF)));
 
 
     view->setMouseTracking(true);
     view->setScene(scene);
     view->centerOn(scene->sceneRect().width()/2,scene->sceneRect().height()/2);
-
-    //propertiesTab = new QTabWidget(this);
-
-
-
-
-//    appProperties  = new QTreeWidget();
-//    moduleProperties  = new QTreeWidget();
-//    moduleDescription = new QTreeWidget();
-//    appProperties->setColumnCount(2);
-//    moduleProperties->setColumnCount(2);
-//    moduleDescription->setColumnCount(2);
-//    appProperties->setHeaderLabels(QStringList() << "Property" << "Value");
-//    moduleProperties->setHeaderLabels(QStringList() << "Property" << "Value");
-//    moduleDescription->setHeaderLabels(QStringList() << "Item" << "Value");
-
-    //initApplicationTab();
+    view->setEditingMode(editingMode);
 
     QAction *zoomIn = builderToolbar.addAction("Zoom In");
     QAction *zoomOut = builderToolbar.addAction("Zoom Out");
@@ -63,17 +60,54 @@ BuilderWindow::BuilderWindow(Application *app, Manager *lazyManager, SafeManager
 
 
     QVBoxLayout *layout = new QVBoxLayout;
-//    QSplitter *splitter = new QSplitter(this);
-    //layout->addWidget(&builderToolbar);
     layout->addWidget(view);
-//    layout->setStretch(0,10);
-//    layout->setStretch(0,90);
-//    splitter->addWidget(view);
-//    splitter->addWidget(propertiesTab);
 
     layout->setMargin(0);
     view->centerOn(0,0);
     setLayout(layout);
+
+    if(editingMode){
+       prepareManagerFrom(lazyManager,app->getName());
+    }
+    m_modified = false;
+    modified(false);
+
+}
+
+void BuilderWindow::save()
+{
+    if(!editingMode){
+        return;
+    }
+    Application* application = manager.getKnowledgeBase()->getApplication();
+    if(!application)
+        return;
+
+    m_modified = !manager.saveApplication(application->getName());
+    modified(m_modified);
+}
+
+void BuilderWindow::prepareManagerFrom(Manager* lazy,
+                                           const char* szAppName)
+{
+
+    // making manager from lazy manager
+    KnowledgeBase* lazy_kb = lazy->getKnowledgeBase();
+
+    ModulePContainer mods =  lazy_kb->getModules();
+    for(ModulePIterator itr=mods.begin(); itr!=mods.end(); itr++)
+        manager.getKnowledgeBase()->addModule((*itr));
+
+    ResourcePContainer res =  lazy_kb->getResources();
+    for(ResourcePIterator itr=res.begin(); itr!=res.end(); itr++)
+        manager.getKnowledgeBase()->addResource((*itr));
+
+    ApplicaitonPContainer apps =  lazy_kb->getApplications();
+    for(ApplicationPIterator itr=apps.begin(); itr!=apps.end(); itr++)
+        manager.getKnowledgeBase()->addApplication((*itr));
+
+    // loading application
+    manager.loadApplication(szAppName);
 
 
 }
@@ -287,46 +321,49 @@ bool BuilderWindow::isModulePresent(Module *module)
 
 
 
-void BuilderWindow::init(bool refresh)
+void BuilderWindow::load(bool refresh)
 {
     index = 0;
+
+    if(editingMode){
+        return;
+    }
+
+    usedModulesId.clear();
 
 
     bool ret = true;//safeManager->loadApplication(app->getName());
     if(ret){
+        Application* mainApplication;
+        CnnContainer connections;
+        ApplicaitonPContainer applications;
+        ExecutablePContainer exes;
 
-        Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
+        if(!editingMode){
+            mainApplication = safeManager->getKnowledgeBase()->getApplication();
+            connections = safeManager->getKnowledgeBase()->getConnections(mainApplication);
+            applications = safeManager->getKnowledgeBase()->getApplications(mainApplication);
+            exes = safeManager->getExecutables();
+        }else{
+            mainApplication = manager.getKnowledgeBase()->getApplication();
+            connections = manager.getKnowledgeBase()->getConnections(mainApplication);
+            applications = manager.getKnowledgeBase()->getApplications(mainApplication);
+            exes = manager.getExecutables();
+        }
+
         //ModulePContainer modules = safeManager->getKnowledgeBase()->getModules(mainApplication);
-        CnnContainer connections = safeManager->getKnowledgeBase()->getConnections(mainApplication);
-        ApplicaitonPContainer applications = safeManager->getKnowledgeBase()->getApplications(mainApplication);
+
         /*************************************/
-        ExecutablePContainer exes = safeManager->getExecutables();
         ExecutablePIterator moditr;
         /*************************************/
 
-        QList <int> usedModulesId;
+
 
         ApplicationPIterator appItr;
         for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
         {
             Application* application = (*appItr);
-            ApplicationItem *appItem = new ApplicationItem(application,safeManager,&usedModulesId);
-            connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-            connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
-            connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
-            scene->addItem(appItem);
-            appItem->init();
-
-            if(application->getModelBase().points.size()>0){
-                appItem->setPos(application->getModelBase().points[0].x,
-                                application->getModelBase().points[0].y);
-            } else {
-                appItem->setPos(index%900+10,
-                                (index/900)*100+10);
-                index += 300;
-            }
-            itemsList.append(appItem);
-
+            addApplication(application);
         }
 
 
@@ -349,7 +386,12 @@ void BuilderWindow::init(bool refresh)
 
         index = (index/900)*100+50;
         CnnIterator citr;
-        ModulePContainer allModules = safeManager->getKnowledgeBase()->getSelModules();
+        ModulePContainer allModules;
+        if(!editingMode){
+            allModules = safeManager->getKnowledgeBase()->getSelModules();
+        }else{
+            allModules = manager.getKnowledgeBase()->getSelModules();
+        }
         int id = 0;
         for(citr=connections.begin(); citr<connections.end(); citr++){
             Connection baseCon = *citr;
@@ -384,11 +426,7 @@ void BuilderWindow::init(bool refresh)
                     }
                 }
                 if(!bExist){
-                    sourcePort = new SourcePortItem((*citr).from());
-                    connect(sourcePort->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
-
-                    itemsList.append(sourcePort);
-                    scene->addItem(sourcePort);
+                    sourcePort = (SourcePortItem*)addSourcePort((*citr).from());
                     source = sourcePort;
 
                     if(model.points.size() > 1){
@@ -422,12 +460,9 @@ void BuilderWindow::init(bool refresh)
                     }
                 }
                 if(!bExist){
-                    destPort = new DestinationPortItem((*citr).to());
-                    connect(destPort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
-                    itemsList.append(destPort);
+                    destPort = (DestinationPortItem*)addDestinantionPort((*citr).to());
                     dest = destPort;
 
-                    scene->addItem(destPort);
                     size_t size = model.points.size();
                     if(size > 2){
                         dest->setPos(model.points[size-1].x + dest->boundingRect().width()/2,
@@ -471,9 +506,21 @@ void BuilderWindow::init(bool refresh)
 
 }
 
+void BuilderWindow::onAddSourcePort(QString name,QPointF pos)
+{
+    BuilderItem *it = addSourcePort(name);
+    it->setPos(pos);
+}
+
+void BuilderWindow::onAddDestinationPort(QString name,QPointF pos)
+{
+    BuilderItem *it = addDestinantionPort(name);
+    it->setPos(pos);
+}
+
 void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 {
-    Arrow *arrow = new Arrow((BuilderItem*)startItem, (BuilderItem*)endItem, safeManager);
+    Arrow *arrow = new Arrow((BuilderItem*)startItem, (BuilderItem*)endItem, &manager);
     arrow->setActions(connectionsAction);
     connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
     arrow->setColor(QColor(Qt::red));
@@ -484,16 +531,20 @@ void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
     arrow->updatePosition();
     itemsList.append(arrow);
 
-    Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
-    safeManager->getKnowledgeBase()->removeApplication(mainApplication);
-    safeManager->getKnowledgeBase()->addApplication(mainApplication);
+    m_modified = true;
+    modified(true);
 
-    itemsList.clear();
-    scene->clear();
+//    Application* mainApplication = manager.getKnowledgeBase()->getApplication();
+
+//    manager.getKnowledgeBase()->removeApplication(mainApplication);
+//    manager.getKnowledgeBase()->addApplication(mainApplication);
+
+//    itemsList.clear();
+//    scene->clear();
 
 
-    refreshApplication();
-    init(true);
+//    refreshApplication();
+
 
 }
 
@@ -506,6 +557,26 @@ void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 //    connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
 //    return it;
 //}
+
+BuilderItem * BuilderWindow::addDestinantionPort(QString name)
+{
+    DestinationPortItem *destPort = new DestinationPortItem(name);
+    connect(destPort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
+    itemsList.append(destPort);
+
+    scene->addItem(destPort);
+    return destPort;
+}
+
+BuilderItem * BuilderWindow::addSourcePort(QString name)
+{
+    SourcePortItem *sourcePort = new SourcePortItem(name);
+    connect(sourcePort->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
+
+    itemsList.append(sourcePort);
+    scene->addItem(sourcePort);
+    return sourcePort;
+}
 
 BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
 {
@@ -528,8 +599,67 @@ BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
     return it;
 }
 
+ApplicationItem* BuilderWindow::addApplication(Application *application)
+{
+
+    ApplicationItem *appItem = new ApplicationItem(application,!editingMode ? safeManager : &manager,&usedModulesId, false,editingMode);
+    connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+    connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+    connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+    scene->addItem(appItem);
+    appItem->init();
+
+    if(application->getModelBase().points.size()>0){
+        appItem->setPos(application->getModelBase().points[0].x,
+                        application->getModelBase().points[0].y);
+    } else {
+        appItem->setPos(index%900+10,
+                        (index/900)*100+10);
+        index += 300;
+    }
+    itemsList.append(appItem);
+    return appItem;
+
+}
+
+void BuilderWindow::onAddedApplication(void *app,QPointF pos)
+{
+    if(!editingMode){
+        return;
+    }
+
+    const char *name = (const char*)((Application*)app)->getName();
+    ApplicationInterface iapp(name);
+    GraphicModel modBase;
+    GyPoint p;
+    p.x = pos.x();
+    p.y = pos.y();
+    modBase.points.push_back(p);
+    iapp.setModelBase(modBase);
+
+    Application* mainApplication = manager.getKnowledgeBase()->getApplication();
+    if(!mainApplication)
+        return;
+
+    const char* uniqueAppId = manager.getKnowledgeBase()->getUniqueAppID(mainApplication, name);
+    QString strPrefix = QString("/%1").arg(uniqueAppId);
+    iapp.setPrefix(strPrefix.toLatin1().data());
+    Application* application  = manager.getKnowledgeBase()->addIApplicationToApplication(mainApplication, iapp);
+    if(application){
+        addApplication(application);
+
+    }
+    m_modified = true;
+    modified(true);
+}
+
 void BuilderWindow::onAddedModule(void *mod,QPointF pos)
 {
+
+    if(!editingMode){
+        return;
+    }
+
 
     ModuleInterface imod((const char*)((Module*)mod)->getName());
     GraphicModel modBase;
@@ -539,35 +669,35 @@ void BuilderWindow::onAddedModule(void *mod,QPointF pos)
     modBase.points.push_back(p);
     imod.setModelBase(modBase);
 
-    Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
-    Module* module = safeManager->getKnowledgeBase()->addIModuleToApplication(mainApplication, imod, true);
+    Application* mainApplication = manager.getKnowledgeBase()->getApplication();
+    if(!mainApplication){
+        return;
+    }
+
+    Module* module = manager.getKnowledgeBase()->addIModuleToApplication(mainApplication, imod, true);
 
     if(module){
         string strPrefix = string("/") + module->getLabel();
         module->setBasePrefix(strPrefix.c_str());
-        string strAppPrefix = safeManager->getKnowledgeBase()->getApplication()->getBasePrefix();
+        string strAppPrefix = app->getBasePrefix();
         string prefix = strAppPrefix+module->getBasePrefix();
-        safeManager->getKnowledgeBase()->setModulePrefix(module, prefix.c_str(), false);
+        manager.getKnowledgeBase()->setModulePrefix(module, prefix.c_str(), false);
 
-//        safeManager->getKnowledgeBase()->removeApplication(mainApplication);
-//        safeManager->getKnowledgeBase()->addApplication(mainApplication);
-
+        addModule(module,-1);
 
 
-//        itemsList.clear();
-//        scene->clear();
-
-
-        //refreshApplication();
-        //refresh();
-        init(true);
+        //load(true);
     }
-
+    m_modified = true;
+    modified(true);
 
 }
 
 void BuilderWindow::setSelectedConnections(QList<int>selectedIds)
 {
+    if(editingMode){
+        return;
+    }
     foreach (QGraphicsItem *it, itemsList) {
         if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
             Arrow *arrow = (Arrow*)it;
@@ -586,6 +716,9 @@ void BuilderWindow::setSelectedConnections(QList<int>selectedIds)
 
 void BuilderWindow::setSelectedModules(QList<int>selectedIds)
 {
+    if(editingMode){
+        return;
+    }
     foreach (QGraphicsItem *it, itemsList) {
         if(it->type() == QGraphicsItem::UserType + ModuleItemType){
             ModuleItem *mod = (ModuleItem*)it;
@@ -606,6 +739,9 @@ void BuilderWindow::onConnectionSelected(QGraphicsItem *it)
 {
     //initModuleTab((ModuleItem*)it);
     Q_UNUSED(it);
+    if(editingMode){
+        return;
+    }
 
     QList<int> selectedModules;
     foreach (QGraphicsItem *item , scene->selectedItems()) {
@@ -623,6 +759,9 @@ void BuilderWindow::onModuleSelected(QGraphicsItem *it)
 {
     //initModuleTab((ModuleItem*)it);
     Q_UNUSED(it);
+    if(editingMode){
+        return;
+    }
 
     QList<int> selectedModules;
     foreach (QGraphicsItem *item , scene->selectedItems()) {
@@ -638,6 +777,9 @@ void BuilderWindow::onModuleSelected(QGraphicsItem *it)
 
 void BuilderWindow::onApplicationSelected(QGraphicsItem* it)
 {
+    if(editingMode){
+        return;
+    }
     //initApplicationTab((ApplicationItem*)it);
 }
 

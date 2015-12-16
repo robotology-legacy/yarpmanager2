@@ -21,7 +21,11 @@
 #include <QMdiArea>
 
 
-ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,yarp::manager::Manager *lazyManager,yarp::os::Property* config,QWidget *parent) :
+ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,
+                                             yarp::manager::Manager *lazyManager,
+                                             yarp::os::Property* config,
+                                             bool editingMode,
+                                             QWidget *parent) :
     GenericViewWidget(parent), ApplicationEvent(),
     ui(new Ui::ApplicationViewWidget)
 {
@@ -29,56 +33,70 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,yar
     lazy = lazyManager;
     this->app = app;
     m_pConfig = config;
-
+    this->editingMode = editingMode;
+    this->m_modified = false;
     type = yarp::manager::APPLICATION;
 
-    prepareManagerFrom(lazy);
+    QGridLayout *l;
 
-    ui->moduleList->resizeColumnToContents(0);
-    ui->moduleList->resizeColumnToContents(1);
-    ui->moduleList->resizeColumnToContents(2);
-    ui->moduleList->resizeColumnToContents(3);
-    ui->moduleList->resizeColumnToContents(4);
-    ui->moduleList->resizeColumnToContents(5);
-    ui->moduleList->resizeColumnToContents(6);
-    ui->moduleList->resizeColumnToContents(7);
+    if(!editingMode){
+        prepareManagerFrom(lazy);
 
-    ui->resourcesList->resizeColumnToContents(0);
-    ui->resourcesList->resizeColumnToContents(1);
-    ui->resourcesList->resizeColumnToContents(2);
-    ui->resourcesList->resizeColumnToContents(3);
+        ui->moduleList->resizeColumnToContents(0);
+        ui->moduleList->resizeColumnToContents(1);
+        ui->moduleList->resizeColumnToContents(2);
+        ui->moduleList->resizeColumnToContents(3);
+        ui->moduleList->resizeColumnToContents(4);
+        ui->moduleList->resizeColumnToContents(5);
+        ui->moduleList->resizeColumnToContents(6);
+        ui->moduleList->resizeColumnToContents(7);
 
-
-    ui->connectionList->resizeColumnToContents(0);
-    ui->connectionList->resizeColumnToContents(1);
-    ui->connectionList->resizeColumnToContents(2);
-    ui->connectionList->resizeColumnToContents(3);
-    ui->connectionList->resizeColumnToContents(4);
-    ui->connectionList->resizeColumnToContents(5);
+        ui->resourcesList->resizeColumnToContents(0);
+        ui->resourcesList->resizeColumnToContents(1);
+        ui->resourcesList->resizeColumnToContents(2);
+        ui->resourcesList->resizeColumnToContents(3);
 
 
-    connect(ui->moduleList,SIGNAL(itemSelectionChanged()),this,SLOT(onModuleItemSelectionChanged()));
-    connect(ui->moduleList,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)));
+        ui->connectionList->resizeColumnToContents(0);
+        ui->connectionList->resizeColumnToContents(1);
+        ui->connectionList->resizeColumnToContents(2);
+        ui->connectionList->resizeColumnToContents(3);
+        ui->connectionList->resizeColumnToContents(4);
+        ui->connectionList->resizeColumnToContents(5);
 
-    connect(ui->resourcesList,SIGNAL(itemSelectionChanged()),this,SLOT(onResourceItemSelectionChanged()));
-    connect(ui->resourcesList,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)));
+        connect(ui->moduleList,SIGNAL(itemSelectionChanged()),this,SLOT(onModuleItemSelectionChanged()));
+        connect(ui->moduleList,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)));
 
-    connect(ui->connectionList,SIGNAL(itemSelectionChanged()),this,SLOT(onConnectionItemSelectionChanged()));
-    connect(ui->connectionList,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)));
+        connect(ui->resourcesList,SIGNAL(itemSelectionChanged()),this,SLOT(onResourceItemSelectionChanged()));
+        connect(ui->resourcesList,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)));
 
-    connect(this,SIGNAL(selfSafeLoadBolance()),this,SLOT(onSelfSafeLoadBalance()),Qt::QueuedConnection);
-    connect(this,SIGNAL(selfConnect(int)),this,SLOT(onSelfConnect(int)),Qt::QueuedConnection);
-    connect(this,SIGNAL(selfDisconnect(int)),this,SLOT(onSelfDisconnect(int)),Qt::QueuedConnection);
-    connect(this,SIGNAL(selfResAvailable(int)),this,SLOT(onSelfResAvailable(int)),Qt::QueuedConnection);
-    connect(this,SIGNAL(selfResUnavailable(int)),this,SLOT(onSelfResUnavailable(int)),Qt::QueuedConnection);
-    connect(this,SIGNAL(selfStart(int)),this,SLOT(onSelfStart(int)),Qt::QueuedConnection);
-    connect(this,SIGNAL(selfStop(int)),this,SLOT(onSelfStop(int)),Qt::QueuedConnection);
-    createModulesViewContextMenu();
-    createConnectionsViewContextMenu();
-    createResourcesViewContextMenu();
+        connect(ui->connectionList,SIGNAL(itemSelectionChanged()),this,SLOT(onConnectionItemSelectionChanged()));
+        connect(ui->connectionList,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(onItemDoubleClicked(QTreeWidgetItem*,int)));
 
-    QGridLayout *l = new QGridLayout(ui->builderContainer);
-    ui->builderContainer->setLayout(l);
+        connect(this,SIGNAL(selfSafeLoadBolance()),this,SLOT(onSelfSafeLoadBalance()),Qt::QueuedConnection);
+        connect(this,SIGNAL(selfConnect(int)),this,SLOT(onSelfConnect(int)),Qt::QueuedConnection);
+        connect(this,SIGNAL(selfDisconnect(int)),this,SLOT(onSelfDisconnect(int)),Qt::QueuedConnection);
+        connect(this,SIGNAL(selfResAvailable(int)),this,SLOT(onSelfResAvailable(int)),Qt::QueuedConnection);
+        connect(this,SIGNAL(selfResUnavailable(int)),this,SLOT(onSelfResUnavailable(int)),Qt::QueuedConnection);
+        connect(this,SIGNAL(selfStart(int)),this,SLOT(onSelfStart(int)),Qt::QueuedConnection);
+        connect(this,SIGNAL(selfStop(int)),this,SLOT(onSelfStop(int)),Qt::QueuedConnection);
+
+        createModulesViewContextMenu();
+        createConnectionsViewContextMenu();
+        createResourcesViewContextMenu();
+
+        l = new QGridLayout(ui->builderContainer);
+        ui->builderContainer->setLayout(l);
+
+
+    }else{
+        layout()->removeWidget(ui->mainSplietter);
+        delete ui->mainSplietter;
+        l = (QGridLayout*)layout();
+
+    }
+
+
     l->setMargin(0);
 
 
@@ -88,45 +106,50 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,yar
 
     builderWidget = new QDockWidget("YARP Builder",builderWindowContainer);
     builderWindowContainer->addDockWidget(Qt::TopDockWidgetArea,builderWidget);
-    builder = YarpBuilderLib::getBuilder(this->app,lazyManager,&safeManager);
+    builder = YarpBuilderLib::getBuilder(this->app,lazyManager,&safeManager,editingMode);
     builderWidget->setWidget(builder);
 
     builderWidget->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     connect(builderWidget,SIGNAL(topLevelChanged(bool)),this,SLOT(onBuilderFloatChanged(bool)));
 
-    builder->addModulesAction(modRunAction);
-    builder->addModulesAction(modStopAction);
-    builder->addModulesAction(modkillAction);
-    builder->addModulesAction(modSeparator);
-    builder->addModulesAction(modRefreshAction);
-    builder->addModulesAction(modSelectAllAction);
-    builder->addModulesAction(modAttachAction);
-    builder->addModulesAction(modAssignAction);
+    if(!editingMode){
+        builder->addModulesAction(modRunAction);
+        builder->addModulesAction(modStopAction);
+        builder->addModulesAction(modkillAction);
+        builder->addModulesAction(modSeparator);
+        builder->addModulesAction(modRefreshAction);
+        builder->addModulesAction(modSelectAllAction);
+        builder->addModulesAction(modAttachAction);
+        builder->addModulesAction(modAssignAction);
 
-    builder->addConnectionsAction(connConnectAction);
-    builder->addConnectionsAction(connDisconnectAction);
-    builder->addConnectionsAction(connSeparatorAction);
-    builder->addConnectionsAction(connRefreshAction);
-    builder->addConnectionsAction(connSelectAllAction);
-    builder->addConnectionsAction(conn1SeparatorAction);
+        builder->addConnectionsAction(connConnectAction);
+        builder->addConnectionsAction(connDisconnectAction);
+        builder->addConnectionsAction(connSeparatorAction);
+        builder->addConnectionsAction(connRefreshAction);
+        builder->addConnectionsAction(connSelectAllAction);
+        builder->addConnectionsAction(conn1SeparatorAction);
+
+        ui->splitter->setStretchFactor(0,50);
+        ui->splitter->setStretchFactor(1,10);
+
+        connect(builder,SIGNAL(refreshApplication()),
+                this,SLOT(onRefreshApplication()),Qt::DirectConnection);
+        connect(builder,SIGNAL(setModuleSelected(QList<int>)),this,SLOT(onModuleSelected(QList<int>)));
+        connect(builder,SIGNAL(setConnectionSelected(QList<int>)),this,SLOT(onConnectionSelected(QList<int>)));
+
+    }else{
+        connect(builder,SIGNAL(modified(bool)),this,SLOT(onModified(bool)));
+    }
 
 
-    builder->init();
+    builder->load();
     builderToolBar = builder->getToolBar();
-    //builderWindowContainer->addToolBar(Qt::TopToolBarArea,builderToolBar);
 
+}
 
-
-
-    connect(builder,SIGNAL(refreshApplication()),
-            this,SLOT(onRefreshApplication()),Qt::DirectConnection);
-    connect(builder,SIGNAL(setModuleSelected(QList<int>)),this,SLOT(onModuleSelected(QList<int>)));
-    connect(builder,SIGNAL(setConnectionSelected(QList<int>)),this,SLOT(onConnectionSelected(QList<int>)));
-    //connect(builderWidget,SIGNAL(topLevelChanged(bool)),this,SLOT(onBuilderFloatingChanged(bool)));
-    ui->splitter->setStretchFactor(0,50);
-    ui->splitter->setStretchFactor(1,10);
-
-
+void ApplicationViewWidget::save()
+{
+    builder->save();
 }
 
 ApplicationViewWidget::~ApplicationViewWidget()
@@ -389,6 +412,8 @@ void ApplicationViewWidget::onRefreshApplication()
 
     reportErrors();
 }
+
+
 
 void ApplicationViewWidget::onConnectionSelected(QList<int> id)
 {
@@ -1372,6 +1397,9 @@ bool ApplicationViewWidget::timeout(double base, double timeout)
 /*! \brief Tells if a modules is in running state*/
 bool ApplicationViewWidget::isRunning()
 {
+    if(editingMode){
+        return false;
+    }
     for(int i=0; i< ui->moduleList->topLevelItemCount();i++){
         if(ui->moduleList->topLevelItem(i)->text(2) == "running"){
             return true;

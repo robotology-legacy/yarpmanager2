@@ -39,6 +39,7 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
 
 private:
     QTreeWidgetItem *applicationNode;
@@ -63,7 +64,7 @@ private:
 signals:
     void viewResource(yarp::manager::Computer*);
     void viewModule(yarp::manager::Module*);
-    void viewApplication(yarp::manager::Application*);
+    void viewApplication(yarp::manager::Application*, bool editing = false);
     void importFiles();
     void openFiles();
     void removeApplication(QString);
@@ -73,6 +74,7 @@ signals:
     void reopenResource(QString, QString);
     void reopenModule(QString, QString);
 public slots:
+    void onSelectItem(QString);
     void onContext(QPoint);
     void onLoadFile();
     void onEdit();

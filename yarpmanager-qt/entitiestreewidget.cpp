@@ -179,6 +179,18 @@ void EntitiesTreeWidget::addAppTemplate(yarp::manager::AppTemplate* tmp)
     item->setIcon(0,QIcon(":/file-xml22.svg"));
 }
 
+
+void EntitiesTreeWidget::onSelectItem(QString name)
+{
+    for(int i=0;applicationNode->childCount();i++){
+        if(applicationNode->child(i)->text(0) == name){
+            yarp::manager::Application *app = (yarp::manager::Application*)applicationNode->child(i)->data(0,Qt::UserRole + 1).toLongLong();
+            viewApplication(app,true);
+            return;
+        }
+    }
+}
+
 /*! \brief Called when an item has been double clicked
 
     when an elemtn of the entities tree has been double clicked it will open its relative view
@@ -228,52 +240,101 @@ void EntitiesTreeWidget::onItemDoubleClicked(QTreeWidgetItem *item,int column)
 }
 
 
+void EntitiesTreeWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    if(selectedItems().count() <= 0){
+        return;
+    }
+    QTreeWidgetItem *selectedItem = selectedItems().at(0);
+    if (selectedItem ){
+
+        if(!selectedItem->data(0,Qt::UserRole).isValid()){
+            QTreeWidget::mousePressEvent(event);
+            return;
+        }
+        qlonglong pointer = selectedItem->data(0,Qt::UserRole + 1).toLongLong();
+
+        QMimeData *mimeData = new QMimeData;
+        QByteArray strPointer = QString("%1").arg(pointer).toLatin1();
+        mimeData->setData("pointer",strPointer);
+
+        if(selectedItem->data(0,Qt::UserRole).toInt() == (int)yarp::manager::MODULE){
+            mimeData->setText("module");
+        }
+        if(selectedItem->data(0,Qt::UserRole).toInt() == (int)yarp::manager::APPLICATION){
+            mimeData->setText("application");
+        }
+
+        QFontMetrics fontMetric(font());
+        int textWidth = fontMetric.width(selectedItem->text(0));
+
+        QDrag *drag = new QDrag(this);
+        drag->setMimeData(mimeData);
+        QPixmap pix(textWidth + 40,18);
+        QPainter painter(&pix);
+        QPen pen(QBrush(QColor((Qt::blue))),1);
+        painter.setPen(pen);
+        painter.fillRect(0,0,textWidth + 40,18,QBrush(QColor((Qt::lightGray))));
+        painter.drawRect(0,0,textWidth- + 39,17);
+        painter.drawImage(QRectF(1,1,16,16),QImage(":/module22.svg"));
+        painter.drawText(QRectF(16,1,textWidth + 20,16),Qt::AlignCenter,selectedItem->text(0));
+        //pix.fill(QColor(Qt::red));
+        drag->setPixmap(pix);
+
+
+        drag->exec(Qt::CopyAction);
+
+
+    }
+
+    QTreeWidget::mouseMoveEvent(event);
+}
 
 void EntitiesTreeWidget::mousePressEvent(QMouseEvent *event)
 {
     QTreeWidgetItem *selectedItem = itemAt(event->pos());
 
     // If the selected Item exists
-    if (selectedItem){
+//    if (selectedItem && event->button() == Qt::MouseButton::LeftButton){
 
-        if(!selectedItem->data(0,Qt::UserRole).isValid()){
-            QTreeWidget::mousePressEvent(event);
-            return;
-        }
-        if(selectedItem->data(0,Qt::UserRole).toInt() == (int)yarp::manager::MODULE){
+//        if(!selectedItem->data(0,Qt::UserRole).isValid()){
+//            QTreeWidget::mousePressEvent(event);
+//            return;
+//        }
+//        qlonglong pointer = selectedItem->data(0,Qt::UserRole + 1).toLongLong();
 
-            qlonglong pointer = selectedItem->data(0,Qt::UserRole + 1).toLongLong();
-            //yarp::manager::Module *mod = (yarp::manager::Module*)pointer;
+//        QMimeData *mimeData = new QMimeData;
+//        QByteArray strPointer = QString("%1").arg(pointer).toLatin1();
+//        mimeData->setData("pointer",strPointer);
 
-            QMimeData *mimeData = new QMimeData;
-            QByteArray strPointer = QString("%1").arg(pointer).toLatin1();
-            mimeData->setData("pointer",strPointer);
-            mimeData->setText("module");
+//        if(selectedItem->data(0,Qt::UserRole).toInt() == (int)yarp::manager::MODULE){
+//            mimeData->setText("module");
+//        }
+//        if(selectedItem->data(0,Qt::UserRole).toInt() == (int)yarp::manager::APPLICATION){
+//            mimeData->setText("application");
+//        }
 
-            // Create drag
+//        QFontMetrics fontMetric(font());
+//        int textWidth = fontMetric.width(selectedItem->text(0));
 
-            QFontMetrics fontMetric(font());
-            int textWidth = fontMetric.width(selectedItem->text(0));
-
-            QDrag *drag = new QDrag(this);
-            drag->setMimeData(mimeData);
-            QPixmap pix(textWidth + 40,18);
-            QPainter painter(&pix);
-            QPen pen(QBrush(QColor((Qt::blue))),1);
-            painter.setPen(pen);
-            painter.fillRect(0,0,textWidth + 40,18,QBrush(QColor((Qt::lightGray))));
-            painter.drawRect(0,0,textWidth + 39,17);
-            painter.drawImage(QRectF(1,1,16,16),QImage(":/module22.svg"));
-            painter.drawText(QRectF(16,1,textWidth + 20,16),Qt::AlignCenter,selectedItem->text(0));
-            //pix.fill(QColor(Qt::red));
-            drag->setPixmap(pix);
-
-
-            drag->exec(Qt::CopyAction);
-        }
+//        QDrag *drag = new QDrag(this);
+//        drag->setMimeData(mimeData);
+//        QPixmap pix(textWidth + 40,18);
+//        QPainter painter(&pix);
+//        QPen pen(QBrush(QColor((Qt::blue))),1);
+//        painter.setPen(pen);
+//        painter.fillRect(0,0,textWidth + 40,18,QBrush(QColor((Qt::lightGray))));
+//        painter.drawRect(0,0,textWidth + 39,17);
+//        painter.drawImage(QRectF(1,1,16,16),QImage(":/module22.svg"));
+//        painter.drawText(QRectF(16,1,textWidth + 20,16),Qt::AlignCenter,selectedItem->text(0));
+//        //pix.fill(QColor(Qt::red));
+//        drag->setPixmap(pix);
 
 
-    }
+//        drag->exec(Qt::CopyAction);
+
+
+//    }
 
     QTreeWidget::mousePressEvent(event);
 }

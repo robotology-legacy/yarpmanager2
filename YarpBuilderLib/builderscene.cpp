@@ -46,6 +46,10 @@ void BuilderScene::dropEvent(QGraphicsSceneDragDropEvent *event)
         Module *mod = (yarp::manager::Module*)pointer;
         addedModule((void*)mod,event->scenePos());
     }
+    if(itemType == "application" ){
+        Application *app = (yarp::manager::Application*)pointer;
+        addedApplication((void*)app,event->scenePos());
+    }
 //    int type = sType.toInt();
 //    BuilderItem *it = NULL;
 
@@ -72,6 +76,10 @@ void BuilderScene::dropEvent(QGraphicsSceneDragDropEvent *event)
 
 void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 {
+    if(!editingMode){
+        event->setAccepted(false);
+        return;
+    }
     event->setAccepted(true);
     //qDebug() << "Drag Move";
 }
@@ -183,7 +191,7 @@ void BuilderScene::onNewConnectionRequested(QPointF p,QGraphicsItem *item)
 {
 
     startConnectionItem = NULL;
-    if(!((BuilderItem*)item)->allowOutputConnections()){
+    if(!editingMode || !((BuilderItem*)item)->allowOutputConnections()){
         return;
     }
 
@@ -205,6 +213,9 @@ void BuilderScene::onNewConnectionRequested(QPointF p,QGraphicsItem *item)
 void BuilderScene::onNewConnectionAdded(QPointF p,QGraphicsItem *item)
 {
     qDebug() << "onNewConnectionAdded";
+    if(!editingMode){
+        return;
+    }
     if(startConnectionItem){
         if(currentLine){
             removeItem(currentLine);

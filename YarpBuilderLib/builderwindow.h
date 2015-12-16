@@ -30,19 +30,26 @@ class YARPBUILDERLIBSHARED_EXPORT BuilderWindow : public QWidget
     Q_OBJECT
 
 public:
-    explicit BuilderWindow(Application *app,Manager *lazyManager,SafeManager *safeManager,QWidget *parent = 0);
+    explicit BuilderWindow(Application *app,Manager *lazyManager,SafeManager *safeManager,bool editingMode = false,QWidget *parent = 0);
+
+
     ~BuilderWindow();
     void setModuleRunning(bool, int id);
     void setConnectionConnected(bool, QString from, QString to);
 
-    void init(bool refresh = false);
+
+    void load(bool refresh = false);
     void refresh();
+    void save();
 
     void setSelectedModules(QList<int>selectedIds);
     void setSelectedConnections(QList<int>selectedIds);
 
     //BuilderItem* addModule(QString itemName, QStringList inputPorts, QStringList outputPorts , QPointF pos, BuilderItem * parent = 0);
-    BuilderItem* addModule(Module *module, int moduleId);
+    BuilderItem *addModule(Module *module, int moduleId);
+    BuilderItem *addSourcePort(QString name);
+    BuilderItem * addDestinantionPort(QString name);
+    ApplicationItem* addApplication(Application *app);
     void setOutputPortAvailable(QString, bool);
     void setInputPortAvailable(QString, bool);
 
@@ -54,7 +61,9 @@ public:
     void addConnectionsAction(QAction*);
 
 private:
-
+    void prepareManagerFrom(Manager* lazy,
+                            const char* szAppName);
+    void init();
     bool isApplicationPresent(Application *application);
     bool isModulePresent(Module *module);
     void initModuleTab(ModuleItem *it);
@@ -67,6 +76,7 @@ private:
 
 private:
     //BuilderUi::BuilderWindow *ui;
+    QList <int> usedModulesId;
     QToolBar builderToolbar;
     BuilderScene *scene;
     QTabWidget *propertiesTab;
@@ -80,11 +90,19 @@ private:
     Application *app;
     int index;
     QList <QGraphicsItem*> itemsList;
+    bool editingMode;
+    bool m_modified;
+
+    QString editingAppName;
+    QString editingAppDescr;
+    QString editingAppVersion;
+    QString editingAppAuthors;
 
 signals:
     void refreshApplication();
     void setModuleSelected(QList<int>);
     void setConnectionSelected(QList<int>);
+    void modified(bool);
 
 private slots:
     void onZoomIn();
@@ -97,7 +115,10 @@ private slots:
     void onApplicationSelected(QGraphicsItem* it);
     void initApplicationTab(ApplicationItem *application = NULL);
     void onAddedModule(void*, QPointF pos);
+    void onAddedApplication(void *app,QPointF pos);
     void onAddNewConnection(void *, void *);
+    void onAddSourcePort(QString, QPointF pos);
+    void onAddDestinationPort(QString,QPointF pos);
 
 };
 
@@ -120,6 +141,19 @@ public:
         setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
         setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
+    }
+
+    void setEditingMode(bool editing)
+    {
+        editingMode = editing;
+        if(scene()){
+            ((BuilderScene*)scene())->editingMode = editingMode;
+        }
+    }
+
+    bool getEditingMode()
+    {
+        return editingMode;
     }
 
 protected:
@@ -184,12 +218,23 @@ protected:
 
     void contextMenuEvent(QContextMenuEvent *event)
     {
+        QMenu menu(this);
         QGraphicsItem *it = itemAt(event->pos());
         if(!it){
+            QAction *addSourcePortAction = menu.addAction("Add Source Port");
+            QAction *addDestinationPortAction = menu.addAction("Add Source Port");
+
+            QAction *act = menu.exec(event->globalPos());
+            if(act == addSourcePortAction){
+                addSourcePort("Source",event->pos());
+            }
+            if(act == addDestinationPortAction){
+                addDestinationPort("Destination",event->pos());
+            }
             return;
         }
 
-        QMenu menu(this);
+
         QAction *copyAction = menu.addAction("Copy");
         QAction *pasteAction = menu.addAction("Paste");
         QAction *deleteAction = menu.addAction("Delete");
@@ -421,6 +466,7 @@ private:
     }
 
 private:
+    bool editingMode;
     QPoint origin;
     QPoint m_lastDragPos;
     QPoint m_rubberBandOrigin;
@@ -431,6 +477,8 @@ private:
     QList <QGraphicsItem*>copiedItems;
 signals:
     void pressedNullItem();
+    void addSourcePort(QString,QPointF pos);
+    void addDestinationPort(QString,QPointF pos);
 
 
 

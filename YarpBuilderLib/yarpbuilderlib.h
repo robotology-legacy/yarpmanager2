@@ -14,7 +14,8 @@ class YARPBUILDERLIBSHARED_EXPORT YarpBuilderLib
 
 public:
     YarpBuilderLib();
-    static BuilderWindow *getBuilder(Application *app, Manager *lazyManager, SafeManager *manager);
+    static BuilderWindow *getBuilder(Application *app, Manager *lazyManager, SafeManager *manager,bool editingMode);
+
 };
 
 #endif // YARPBUILDERLIB_H

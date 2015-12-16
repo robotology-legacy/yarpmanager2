@@ -34,7 +34,11 @@ class ApplicationViewWidget : public GenericViewWidget, public ApplicationEvent
     Q_OBJECT
 
 public:
-    explicit ApplicationViewWidget(yarp::manager::Application *, yarp::manager::Manager *lazyManager, yarp::os::Property* config,QWidget *parent = 0);
+    explicit ApplicationViewWidget(yarp::manager::Application *,
+                                   yarp::manager::Manager *lazyManager,
+                                   yarp::os::Property* config,
+                                   bool editingMode = false,
+                                   QWidget *parent = 0);
     ~ApplicationViewWidget();
 
     void runApplicationSet();
@@ -63,6 +67,8 @@ public:
     QToolBar* getBuilderToolBar();
     bool isBuilderFloating();
     void showBuilder(bool);
+
+    void save();
 
 
 private:
@@ -123,6 +129,8 @@ private:
 
     QList <StdoutWindow*> stdoutWinList;
 
+    bool editingMode;
+
 
 private slots:
     void onAssignHost();
@@ -175,6 +183,8 @@ signals:
     void selfStart(int);
     void selfStop(int);
     void builderWindowFloating(bool);
+
+
 
 };
 

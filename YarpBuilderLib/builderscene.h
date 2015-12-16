@@ -22,6 +22,7 @@ private:
 
 protected:
     bool snap;
+    bool editingMode;
 
 
 protected:
@@ -34,6 +35,7 @@ protected:
     //void wheelEvent(QGraphicsSceneWheelEvent *event);
 
 signals:
+    void addedApplication(void *app,QPointF);
     void addedModule(void *mod,QPointF);
     void addNewConnection(void *start, void *end);
 
@@ -46,3 +48,4 @@ public slots:
 };
 
 #endif // BUILDERSCENE_H
+

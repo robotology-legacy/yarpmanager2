@@ -97,7 +97,8 @@ SOURCES += main.cpp\
     logwidget.cpp \
     stdoutwindow.cpp \
     aboutdlg.cpp \
-    genericinfodlg.cpp
+    genericinfodlg.cpp \
+    newapplicationwizard.cpp
 
 HEADERS  += mainwindow.h \
     entitiestreewidget.h \
@@ -112,7 +113,8 @@ HEADERS  += mainwindow.h \
     logwidget.h \
     stdoutwindow.h \
     aboutdlg.h \
-    genericinfodlg.h
+    genericinfodlg.h \
+    newapplicationwizard.h
 
 FORMS    += mainwindow.ui \
     moduleviewwidget.ui \

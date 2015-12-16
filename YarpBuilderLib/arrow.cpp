@@ -99,8 +99,8 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
             label = QString("%1").arg(port->getInputData()->getCarrier());
         }
 
-    }else if(startItem->type() == (QGraphicsItem::UserType + (int)DestinationPortItemType)){
-
+    }else if(endItem->type() == (QGraphicsItem::UserType + (int)DestinationPortItemType)){
+        strTo = string(endItem->getItemName().toLatin1().data());
     }
 
     if(startItem->type() == (QGraphicsItem::UserType + (int)ModulePortItemType)){
@@ -114,7 +114,11 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
         }
 
     }else if(startItem->type() == (QGraphicsItem::UserType + (int)SourcePortItemType)){
+        strFrom = string(startItem->getItemName().toLatin1().data());
+    }
 
+    if(label.isEmpty()){
+        label = "tcp";
     }
 
 
@@ -127,7 +131,19 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
     connection.setCorInputData(input);
     //connection.setModel(this);
     Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
+
+
+    GyPoint p,p1;
+    p.x = startItem->pos().x();
+    p.y = startItem->pos().y();
+    p1.x = endItem->pos().x();
+    p1.y = endItem->pos().y();
+    model.points.push_back(p1);
+    model.points.push_back(p);
+    connection.setModel(&model);
+
     connection = safeManager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
+
 
     if(!label.isEmpty()){
         textLbl = new Label(label,this);

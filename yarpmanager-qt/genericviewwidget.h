@@ -27,12 +27,16 @@ class GenericViewWidget : public QWidget
 public:
     explicit GenericViewWidget(QWidget *parent = 0);
     yarp::manager::NodeType getType();
+    bool isModified();
 
 protected:
     yarp::manager::NodeType type;
+    bool m_modified;
 signals:
+    void modified(bool);
 
 public slots:
+    void onModified(bool mod);
 
 };
 

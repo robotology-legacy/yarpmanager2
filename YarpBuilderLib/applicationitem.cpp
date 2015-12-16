@@ -7,13 +7,15 @@
 #include <QGraphicsDropShadowEffect>
 #include <QDebug>
 
-ApplicationItem::ApplicationItem(Application* application, Manager *manager,  QList <int> *usedIds,bool isInApp,BuilderItem *parent) :
+ApplicationItem::ApplicationItem(Application* application, Manager *manager,  QList <int> *usedIds,bool isInApp, bool editingMode,
+                                 BuilderItem *parent) :
     BuilderItem(parent)
 {
     sigHandler = new ItemSignalHandler();
     this->itemType = ApplicationItemType;
     this->itemName = QString("%1").arg(application->getName());
     this->application = application;
+    this->editingMode = editingMode;
     //this->itemsList = itemsList;
     this->mainAppManager = manager;
     index = 0;
@@ -81,7 +83,7 @@ void ApplicationItem::init()
         for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
         {
             Application* application = (*appItr);
-            ApplicationItem *appItem = new ApplicationItem(application,mainAppManager,usedModulesId,true,this);
+            ApplicationItem *appItem = new ApplicationItem(application,mainAppManager,usedModulesId,true,editingMode,this);
             //connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
             QObject::connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
             //connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),sigHandler,SLOT(onApplicationSelected(QGraphicsItem*)));
@@ -107,17 +109,22 @@ void ApplicationItem::init()
         for(itr=modules.begin(); itr!=modules.end(); itr++){
             Module* module1 = (*itr); //dynamic_cast<Module*>(application->getLinkAt(i).to());
 
-            for(moditr=exes.begin(); moditr<exes.end(); moditr++){
+            if(!editingMode){
+                for(moditr=exes.begin(); moditr<exes.end(); moditr++){
 
-                Module* module = (*moditr)->getModule();
+                    Module* module = (*moditr)->getModule();
 
-                if(module == module1){
-                    QString id = QString("%1").arg((*moditr)->getID());
-                    usedModulesId->append(id.toInt());
-                    addModule(module,id.toInt());
-                    break;
+                    if(module == module1){
+                        QString id = QString("%1").arg((*moditr)->getID());
+                        usedModulesId->append(id.toInt());
+                        addModule(module,id.toInt());
+                        break;
+                    }
                 }
+            }else{
+                addModule(module1,-1);
             }
+
         }
 
 

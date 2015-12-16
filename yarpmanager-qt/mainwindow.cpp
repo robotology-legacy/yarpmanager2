@@ -20,6 +20,7 @@
 #include "moduleviewwidget.h"
 #include "applicationviewwidget.h"
 #include "resourceviewwidget.h"
+#include "yarpbuilderlib.h"
 
 #include "template_res.h"
 #include "aboutdlg.h"
@@ -28,6 +29,12 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QDesktopServices>
+
+#include <QWizardPage>
+#include <QLabel>
+#include <QLineEdit>
+
+
 
 #if defined(WIN32)
     #pragma warning (disable : 4250)
@@ -66,7 +73,7 @@ bool isAbsolute(const char *path) {  //copied from yarp_OS ResourceFinder.cpp
 }
 
 MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
+    QMainWindow(parent), newApplicationWizard(&config),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
@@ -80,7 +87,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->entitiesTree,SIGNAL(viewResource(yarp::manager::Computer*)),this,SLOT(viewResource(yarp::manager::Computer*)));
     connect(ui->entitiesTree,SIGNAL(viewModule(yarp::manager::Module*)),this,SLOT(viewModule(yarp::manager::Module*)));
-    connect(ui->entitiesTree,SIGNAL(viewApplication(yarp::manager::Application*)),this,SLOT(viewApplication(yarp::manager::Application*)));
+    connect(ui->entitiesTree,SIGNAL(viewApplication(yarp::manager::Application*,bool)),this,SLOT(viewApplication(yarp::manager::Application*,bool)));
     connect(ui->entitiesTree,SIGNAL(openFiles()),this,SLOT(onOpen()));
     connect(ui->entitiesTree,SIGNAL(importFiles()),this,SLOT(onImportFiles()));
     connect(ui->entitiesTree,SIGNAL(removeApplication(QString)),this,SLOT(onRemoveApplication(QString)));
@@ -107,18 +114,30 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionClose,SIGNAL(triggered()),this,SLOT(onClose()));
     connect(ui->actionQuit,SIGNAL(triggered()),this,SLOT(close()));
     connect(ui->actionOpen_File,SIGNAL(triggered()),this,SLOT(onOpen()));
+    connect(ui->actionSave,SIGNAL(triggered()),this,SLOT(onSave()));
     connect(ui->actionHelp,SIGNAL(triggered()),this,SLOT(onHelp()));
     connect(ui->actionAbout,SIGNAL(triggered()),this,SLOT(onAbout()));
 
 
+    connect(this,SIGNAL(selectItem(QString)),ui->entitiesTree,SLOT(onSelectItem(QString)));
+    //connect(&newApplicationWizard,SIGNAL(wizardError(QString)),this,SLOT(onWizardError(QString)));
 
     onTabChangeItem(-1);
+
 
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+
+void MainWindow::onWizardError(QString err)
+{
+    yarp::manager::ErrorLogger* logger  = yarp::manager::ErrorLogger::Instance();
+    logger->addError(err.toLatin1().data());
+    reportErrors();
 }
 
 /*! \brief Init the application with the current configuration.
@@ -279,7 +298,7 @@ void MainWindow::reportErrors()
 
 /*! \brief Synchs the application list on filesystem with the application tree.
  */
-void MainWindow::syncApplicationList()
+void MainWindow::syncApplicationList(QString selectNodeForEditing)
 {
     ui->entitiesTree->clearApplication();
     ui->entitiesTree->clearModules();
@@ -294,6 +313,10 @@ void MainWindow::syncApplicationList()
         yarp::manager::Application *app = dynamic_cast<yarp::manager::Application*>(*itr);
         if(app){
             ui->entitiesTree->addApplication(app);
+            if(strcmp(selectNodeForEditing.toLatin1().data(),app->getName())==0){
+                selectItem(selectNodeForEditing);
+            }
+
         }
     }
 
@@ -433,7 +456,7 @@ void MainWindow::viewModule(yarp::manager::Module *module)
 /*! \brief Load the Application on the MainWindow
     \param app the Application
  */
-void MainWindow::viewApplication(yarp::manager::Application *app)
+void MainWindow::viewApplication(yarp::manager::Application *app,bool editingMode)
 {
     for(int i=0;i<ui->mainTabs->count();i++){
         if(ui->mainTabs->tabText(i) == app->getName()){
@@ -442,10 +465,11 @@ void MainWindow::viewApplication(yarp::manager::Application *app)
         }
     }
 
-    ApplicationViewWidget *w = new ApplicationViewWidget(app,&lazyManager,&config,ui->mainTabs);
+    ApplicationViewWidget *w = new ApplicationViewWidget(app,&lazyManager,&config,editingMode,ui->mainTabs);
     connect(w,SIGNAL(logError(QString)),this,SLOT(onLogError(QString)));
     connect(w,SIGNAL(logWarning(QString)),this,SLOT(onLogWarning(QString)));
     connect(w,SIGNAL(builderWindowFloating(bool)),this,SLOT(onBuilderWindowFloating(bool)));
+    connect(w,SIGNAL(modified(bool)),this,SLOT(onModified(bool)));
     int index = ui->mainTabs->addTab(w,app->getName());
     ui->mainTabs->setTabIcon(index,QIcon(":/run22.svg"));
     ui->mainTabs->setCurrentIndex(index);
@@ -671,6 +695,14 @@ void MainWindow::onTabChangeItem(int index)
         ui->actionStop->setEnabled(true);
         ui->actionKill->setEnabled(true);
 
+        if(w->isModified()){
+            ui->actionSave->setEnabled(true);
+            ui->actionSave_As->setEnabled(true);
+        }else{
+            ui->actionSave->setEnabled(false);
+            ui->actionSave_As->setEnabled(false);
+        }
+
         ApplicationViewWidget *aw = (ApplicationViewWidget*)w;
         if(builderToolBar){
             removeToolBar(builderToolBar);
@@ -694,11 +726,14 @@ void MainWindow::onTabChangeItem(int index)
                 }
             }
         }
+        prevWidget = w;
     }else{
         if(w && w->getType() == yarp::manager::RESOURCE){
             ui->actionRefresh_Status->setEnabled(true);
+            prevWidget = w;
         }else{
             ui->actionRefresh_Status->setEnabled(false);
+            prevWidget = NULL;
         }
         ui->actionSelect_All->setEnabled(false);
         ui->actionExport_Graph->setEnabled(false);
@@ -712,39 +747,84 @@ void MainWindow::onTabChangeItem(int index)
             removeToolBar(builderToolBar);
             builderToolBar = NULL;
         }
+
+        if(w){
+            BuilderWindow *b = (BuilderWindow*)ui->mainTabs->widget(index);
+            builderToolBar = b->getToolBar();
+            if(builderToolBar){
+                addToolBar(builderToolBar);
+                builderToolBar->show();
+            }
+        }
     }
-    prevWidget = w;
+
 }
 
 /*! \brief Create a new Application */
 void MainWindow::onNewApplication()
 {
-    yarp::manager::ErrorLogger* logger  = yarp::manager::ErrorLogger::Instance();
+    newApplicationWizard.setWindowTitle("Create New Application");
+    if(newApplicationWizard.exec() == QDialog::Accepted){
+        qDebug() << "Accepted " << newApplicationWizard.name;
 
-    QString fileName = QFileDialog::getSaveFileName(this,"Create new Application description file",QApplication::applicationDirPath(),
-                                 "Application description files (*.xml)");
+        QFile f(newApplicationWizard.fileName);
+        if(!f.open(QIODevice::WriteOnly)){
+            yarp::manager::ErrorLogger* logger  = yarp::manager::ErrorLogger::Instance();
+            logger->addError(QString("Cannot create %1").arg(newApplicationWizard.fileName.toLatin1().data()).toLatin1().data());
+            reportErrors();
+            return;
+        }
 
-    QFile f(fileName);
-    bool b = f.open(QIODevice::ReadWrite);
-    if(b){
-        f.write(str_app_template.c_str());
-        f.flush();
+        QString s  = "<application>\n"
+                     "      <name>" + newApplicationWizard.name + "</name>\n"
+                     "      <description>" + newApplicationWizard.description + "</description>\n"
+                     "      <version>" + newApplicationWizard.version + "</version>\n"
+                     "      <authors>\n"
+                     "      </authors>\n"
+                     "</application>\n";
+        f.write(s.toLatin1());
         f.close();
-    }else{
-        QString err = QString("Cannot create %1").arg(fileName);
-        logger->addError(err.toLatin1().data());
-        reportErrors();
-        return;
-    }
 
-    yarp::manager::LocalBroker launcher;
-    if(launcher.init(ext_editor.c_str(), fileName.toLatin1().data(), NULL, NULL, NULL, NULL)){
-        if(!launcher.start() && strlen(launcher.error())){
-            QString msg = QString("Error while launching %1. %2").arg(ext_editor.c_str()).arg(launcher.error());
-            logger->addError(msg.toLatin1().data());
+        if(lazyManager.addApplication(newApplicationWizard.fileName.toLatin1().data(),
+                                      newApplicationWizard.name.toLatin1().data(),
+                                      254)){
+
+            syncApplicationList(newApplicationWizard.name);
+
+        } else {
             reportErrors();
         }
+
+
+        return;
     }
+    qDebug() << "Rejected";
+//    yarp::manager::ErrorLogger* logger  = yarp::manager::ErrorLogger::Instance();
+
+//    QString fileName = QFileDialog::getSaveFileName(this,"Create new Application description file",QApplication::applicationDirPath(),
+//                                 "Application description files (*.xml)");
+
+//    QFile f(fileName);
+//    bool b = f.open(QIODevice::ReadWrite);
+//    if(b){
+//        f.write(str_app_template.c_str());
+//        f.flush();
+//        f.close();
+//    }else{
+//        QString err = QString("Cannot create %1").arg(fileName);
+//        logger->addError(err.toLatin1().data());
+//        reportErrors();
+//        return;
+//    }
+
+//    yarp::manager::LocalBroker launcher;
+//    if(launcher.init(ext_editor.c_str(), fileName.toLatin1().data(), NULL, NULL, NULL, NULL)){
+//        if(!launcher.start() && strlen(launcher.error())){
+//            QString msg = QString("Error while launching %1. %2").arg(ext_editor.c_str()).arg(launcher.error());
+//            logger->addError(msg.toLatin1().data());
+//            reportErrors();
+//        }
+//    }
 }
 
 /*! \brief Create a new Resource */
@@ -850,6 +930,30 @@ void MainWindow::onClose()
     onTabClose(index);
 }
 
+void MainWindow::onModified(bool mod)
+{
+    ui->actionSave->setEnabled(mod);
+    ui->actionSave_As->setEnabled(mod);
+
+//    if(mod){
+//        int index = ui->mainTabs->currentIndex();
+//        ui->mainTabs->setTabText(index,QString("%1*").arg(ui->mainTabs->tabText(index).toLatin1().data()));
+//    }
+}
+
+void MainWindow::onSave()
+{
+    GenericViewWidget *w = (GenericViewWidget *)ui->mainTabs->currentWidget();
+    if(!w){
+        return;
+    }
+    yarp::manager::NodeType type = ((GenericViewWidget*)w)->getType();
+    if(type == yarp::manager::APPLICATION){
+        ApplicationViewWidget *ww = (ApplicationViewWidget*)w;
+        ww->save();
+    }
+}
+
 /*! \brief Open File (Modules, Applications, Resources) */
 void MainWindow::onOpen()
 {
@@ -900,7 +1004,7 @@ void MainWindow::onRemoveApplication(QString appName)
 void MainWindow::onReopenApplication(QString appName,QString fileName)
 {
     lazyManager.removeApplication(appName.toLatin1().data());
-    lazyManager.addApplication(fileName.toLatin1().data(),appName.toLatin1().data());
+    lazyManager.addApplication(fileName.toLatin1().data(),appName.toLatin1().data(),254);
     syncApplicationList();
 }
 
