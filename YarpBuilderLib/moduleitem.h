@@ -24,19 +24,19 @@ class Arrow;
 class ModuleItem : public BuilderItem
 {
 
-
+    friend class Arrow;
     friend class PortItem;
 
 public:
    // ModuleItem(QString itemName, QStringList inputPorts, QStringList outputPorts , BuilderItem * parent = 0);
-     ModuleItem(Module *module, int moduleId,bool isInApp = false,BuilderItem * parent = 0);
+     ModuleItem(Module *module, int moduleId, bool isInApp = false, bool editingMode = false,
+                Manager *manager = NULL, BuilderItem * parent = 0);
     ~ModuleItem();
     QRectF boundingRect() const;
     QPointF connectionPoint();
     int getId();
     void setRunning(bool);
     void setModuleSelected(bool selected);
-
     int type() const ;
 
 
@@ -51,8 +51,10 @@ private:
 
 
 private:
+    Manager *manager;
     bool externalSelection;
     bool isInApp;
+    bool editingMode;
     int moduleId;
     Module *module;
     QStringList inputPorts;
@@ -80,7 +82,7 @@ signals:
 
 class PortItem : public BuilderItem
 {
-
+    friend class Arrow;
 
 public:
     PortItem(QString portName, int type, BuilderItem *parent = 0);

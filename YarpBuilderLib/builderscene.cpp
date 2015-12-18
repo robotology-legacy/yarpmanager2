@@ -87,7 +87,6 @@ void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 
 void BuilderScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    qDebug() << "mousePressEvent";
     if(currentLine){
         removeItem(currentLine);
         delete currentLine;

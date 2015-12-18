@@ -16,6 +16,7 @@ BuilderWindow::BuilderWindow(Application *app, Manager *lazyManager, SafeManager
     this->app = app;
     this->safeManager = safeManager;
 
+
     init();
 
 }
@@ -25,16 +26,17 @@ void BuilderWindow::init()
     scene = new BuilderScene(this);
     scene->setSceneRect(QRectF(0, 0, 2000, 2000));
     scene->setBackgroundBrush(QPixmap(":/images/background2.png"));
-    connect(scene,SIGNAL(addedModule(void*,QPointF)),this,SLOT(onAddedModule(void*,QPointF)));
+    connect(scene,SIGNAL(addedModule(void*,QPointF)),this,SLOT(onAddModule(void*,QPointF)));
     connect(scene,SIGNAL(addedApplication(void*,QPointF)),this,SLOT(onAddedApplication(void*,QPointF)));
-    connect(scene,SIGNAL(addNewConnection(void*,void*))
-            ,this,SLOT(onAddNewConnection(void*,void*)));
+    connect(scene,SIGNAL(addNewConnection(void*,void*)),this,SLOT(onAddNewConnection(void*,void*)));
 
-    view = new MyView();
+    view = new CustomView(this);
     connect(view,SIGNAL(pressedNullItem()),this,SLOT(initApplicationTab()));
     connect(view,SIGNAL(addSourcePort(QString,QPointF)),this,SLOT(onAddSourcePort(QString,QPointF)));
     connect(view,SIGNAL(addDestinationPort(QString,QPointF)),this,SLOT(onAddDestinationPort(QString,QPointF)));
-
+    connect(view,SIGNAL(addModule(void*,QPointF)),this,SLOT(onAddModule(void*,QPointF)));
+    connect(view,SIGNAL(addNewConnection(void*,void*)),this,SLOT(onAddNewConnection(void*,void*)));
+    connect(view,SIGNAL(modified()),this,SLOT(onModified()));
 
     view->setMouseTracking(true);
     view->setScene(scene);
@@ -58,17 +60,29 @@ void BuilderWindow::init()
     connect(zoomIn,SIGNAL(triggered(bool)),this,SLOT(onZoomIn()));
     connect(zoomOut,SIGNAL(triggered(bool)),this,SLOT(onZoomOut()));
 
+    if(editingMode){
+       prepareManagerFrom(lazyManager,app->getName());
+    }
+
 
     QVBoxLayout *layout = new QVBoxLayout;
-    layout->addWidget(view);
+    if(editingMode){
+        propertiesTab = new PropertiesTable();
+        propertiesTab->showApplicationTab(manager.getKnowledgeBase()->getApplication());
+        splitter = new QSplitter;
+        splitter->addWidget(view);
+        splitter->addWidget(propertiesTab);
+        layout->addWidget(splitter);
+    }else{
+        layout->addWidget(view);
+    }
+
 
     layout->setMargin(0);
     view->centerOn(0,0);
     setLayout(layout);
 
-    if(editingMode){
-       prepareManagerFrom(lazyManager,app->getName());
-    }
+
     m_modified = false;
     modified(false);
 
@@ -132,6 +146,22 @@ void BuilderWindow::prepareManagerFrom(Manager* lazy,
 BuilderWindow::~BuilderWindow()
 {
     //delete ui;
+    for(int i=0;i<itemsList.count();i++){
+        BuilderItem *it =((BuilderItem*)itemsList.at(i));
+        if(it->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+        }
+        if(it->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
+            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+        }
+    }
+    view->deleteAllItems();
 }
 
 
@@ -149,12 +179,26 @@ void BuilderWindow::removeToolBar()
 void BuilderWindow::addToolBar()
 {
     layout()->removeWidget(&builderToolbar);
-    layout()->removeWidget(view);
+    if(editingMode){
+        layout()->removeWidget(splitter);
+    }else{
+        layout()->removeWidget(view);
+    }
 
     layout()->addWidget(&builderToolbar);
-    layout()->addWidget(view);
+    if(editingMode){
+        layout()->addWidget(splitter);
+    }else{
+        layout()->addWidget(view);
+    }
 
     builderToolbar.show();
+}
+
+void BuilderWindow::addAction(QAction *act)
+{
+   builderActions.append(act);
+
 }
 
 void BuilderWindow::addModulesAction(QAction *act)
@@ -340,10 +384,10 @@ void BuilderWindow::load(bool refresh)
                     source = sourcePort;
 
                     if(model.points.size() > 1){
-                        source->setPos(model.points[1].x + source->boundingRect().width()/2,
-                                       model.points[1].y + source->boundingRect().height()/2);
+                        source->setPos(model.points[1].x /*+ source->boundingRect().width()/2*/,
+                                       model.points[1].y /*+ source->boundingRect().height()/2*/);
                     }else{
-                        source->setPos(10 + source->boundingRect().width()/2, index);
+                        source->setPos(10 /*+ source->boundingRect().width()/2*/, index);
                     }
                 }
 
@@ -373,10 +417,10 @@ void BuilderWindow::load(bool refresh)
 
                     size_t size = model.points.size();
                     if(size > 2){
-                        dest->setPos(model.points[size-1].x + dest->boundingRect().width()/2,
-                                       model.points[size-1].y + dest->boundingRect().height()/2);
+                        dest->setPos(model.points[size-1].x /*+ dest->boundingRect().width()/2*/,
+                                       model.points[size-1].y/* + dest->boundingRect().height()/2*/);
                     }else{
-                        dest->setPos(400 + dest->boundingRect().width()/2, index);
+                        dest->setPos(400 /*+ dest->boundingRect().width()/2*/, index);
                     }
                 }
 
@@ -390,7 +434,7 @@ void BuilderWindow::load(bool refresh)
                 // TODO
             }else{
                 if(source && dest){
-                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager);
+                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager,false,editingMode);
                     arrow->setActions(connectionsAction);
                     connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
                     arrow->setColor(QColor(Qt::red));
@@ -414,21 +458,27 @@ void BuilderWindow::load(bool refresh)
 
 }
 
-void BuilderWindow::onAddSourcePort(QString name,QPointF pos)
+BuilderItem *BuilderWindow::onAddSourcePort(QString name,QPointF pos)
 {
     BuilderItem *it = addSourcePort(name,true);
+    it->snapToGrid(scene->snap);
+    it->setSelected(true);
     it->setPos(pos);
+    return it;
 }
 
-void BuilderWindow::onAddDestinationPort(QString name,QPointF pos)
+BuilderItem *BuilderWindow::onAddDestinationPort(QString name,QPointF pos)
 {
     BuilderItem *it = addDestinantionPort(name,true);
+    it->snapToGrid(scene->snap);
+    it->setSelected(true);
     it->setPos(pos);
+    return it;
 }
 
-void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
+BuilderItem *BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 {
-    Arrow *arrow = new Arrow((BuilderItem*)startItem, (BuilderItem*)endItem, &manager);
+    Arrow *arrow = new Arrow((BuilderItem*)startItem, (BuilderItem*)endItem, &manager,false,editingMode);
     arrow->setActions(connectionsAction);
     connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
     arrow->setColor(QColor(Qt::red));
@@ -441,6 +491,7 @@ void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 
     m_modified = true;
     modified(true);
+    return arrow;
 
 //    Application* mainApplication = manager.getKnowledgeBase()->getApplication();
 
@@ -468,7 +519,13 @@ void  BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 
 BuilderItem * BuilderWindow::addDestinantionPort(QString name, bool editOnStart)
 {
-    DestinationPortItem *destPort = new DestinationPortItem(name,false,&itemsList,editOnStart);
+    Application *mainApplication = NULL;
+    if(!editingMode){
+        mainApplication = safeManager->getKnowledgeBase()->getApplication();
+    }else{
+        mainApplication = manager.getKnowledgeBase()->getApplication();
+    }
+    DestinationPortItem *destPort = new DestinationPortItem(name,false,&itemsList,editOnStart,mainApplication);
     connect(destPort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
     connect(destPort->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
     itemsList.append(destPort);
@@ -485,7 +542,13 @@ void BuilderWindow::onModified()
 
 BuilderItem * BuilderWindow::addSourcePort(QString name, bool editOnStart)
 {
-    SourcePortItem *sourcePort = new SourcePortItem(name,false,&itemsList,editOnStart);
+    Application *mainApplication = NULL;
+    if(!editingMode){
+        mainApplication = safeManager->getKnowledgeBase()->getApplication();
+    }else{
+        mainApplication = manager.getKnowledgeBase()->getApplication();
+    }
+    SourcePortItem *sourcePort = new SourcePortItem(name,false,&itemsList,editOnStart,mainApplication);
     connect(sourcePort->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     connect(sourcePort->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
 
@@ -496,20 +559,21 @@ BuilderItem * BuilderWindow::addSourcePort(QString name, bool editOnStart)
 
 BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
 {
-    ModuleItem *it = new ModuleItem(module,moduleId);
+    ModuleItem *it = new ModuleItem(module,moduleId,false,editingMode,!editingMode ? safeManager : &manager);
     it->setActions(modulesAction);
     connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
+    connect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
     itemsList.append(it);
     scene->addItem(it);
     it->setZValue(2);
     if(module->getModelBase().points.size()>0){
-        it->setPos(module->getModelBase().points[0].x + it->boundingRect().width()/2,
-                module->getModelBase().points[0].y + it->boundingRect().height()/2);
+        it->setPos(module->getModelBase().points[0].x /*+ it->boundingRect().width()/2*/,
+                module->getModelBase().points[0].y /*+ it->boundingRect().height()/2*/);
     }else{
-        it->setPos(index%900+10 + it->boundingRect().width()/2,
-                   (index/900)*100+10 + it->boundingRect().height()/2);
+        it->setPos(index%900+10 /*+ it->boundingRect().width()/2*/,
+                   (index/900)*100+10 /*+ it->boundingRect().height()/2*/);
         index += 300;
     }
     return it;
@@ -522,6 +586,7 @@ ApplicationItem* BuilderWindow::addApplication(Application *application)
     connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
     connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
     connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+    connect(appItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
     scene->addItem(appItem);
     appItem->init();
 
@@ -569,11 +634,12 @@ void BuilderWindow::onAddedApplication(void *app,QPointF pos)
     modified(true);
 }
 
-void BuilderWindow::onAddedModule(void *mod,QPointF pos)
+BuilderItem *BuilderWindow::onAddModule(void *mod,QPointF pos)
 {
 
+    BuilderItem *modIt = NULL;
     if(!editingMode){
-        return;
+        return modIt;
     }
 
 
@@ -587,7 +653,7 @@ void BuilderWindow::onAddedModule(void *mod,QPointF pos)
 
     Application* mainApplication = manager.getKnowledgeBase()->getApplication();
     if(!mainApplication){
-        return;
+        return modIt;
     }
 
     Module* module = manager.getKnowledgeBase()->addIModuleToApplication(mainApplication, imod, true);
@@ -595,17 +661,20 @@ void BuilderWindow::onAddedModule(void *mod,QPointF pos)
     if(module){
         string strPrefix = string("/") + module->getLabel();
         module->setBasePrefix(strPrefix.c_str());
-        string strAppPrefix = app->getBasePrefix();
+        string strAppPrefix = mainApplication->getBasePrefix();
         string prefix = strAppPrefix+module->getBasePrefix();
         manager.getKnowledgeBase()->setModulePrefix(module, prefix.c_str(), false);
 
-        addModule(module,-1);
+        modIt = addModule(module,-1);
+        modIt->setSelected(true);
+        modIt->snapToGrid(scene->snap);
 
 
         //load(true);
     }
     m_modified = true;
     modified(true);
+    return modIt;
 
 }
 
@@ -673,9 +742,10 @@ void BuilderWindow::onConnectionSelected(QGraphicsItem *it)
 
 void BuilderWindow::onModuleSelected(QGraphicsItem *it)
 {
-    //initModuleTab((ModuleItem*)it);
+
     Q_UNUSED(it);
     if(editingMode){
+        propertiesTab->showModuleTab(((ModuleItem*)it)->getInnerModule());
         return;
     }
 
@@ -693,17 +763,27 @@ void BuilderWindow::onModuleSelected(QGraphicsItem *it)
 
 void BuilderWindow::onApplicationSelected(QGraphicsItem* it)
 {
-    if(editingMode){
+    if(!editingMode){
         return;
     }
-    //initApplicationTab((ApplicationItem*)it);
+    propertiesTab->showApplicationTab(((ApplicationItem*)it)->getInnerApplication());
 }
 
-void BuilderWindow::initApplicationTab(ApplicationItem *application)
+void BuilderWindow::initApplicationTab()
 {
+    if(!editingMode){
+        return;
+    }
+    propertiesTab->showApplicationTab(manager.getKnowledgeBase()->getApplication());
+//    if(!propertiesTab){
+//        return;
+//    }
 //    Application *auxApp = app;
 //    if(application){
 //        auxApp = application->getInnerApplication();
+//    }
+//    if(!appProperties){
+//        appProperties = new QTreeWidget();
 //    }
 //    propertiesTab->clear();
 //    propertiesTab->addTab(appProperties,"Application Properties");
@@ -1024,4 +1104,537 @@ void BuilderWindow::setInputPortAvailable(QString iData, bool available)
                 }
             }
     }
+}
+
+/**********************************************************************************/
+/**********************************************************************************/
+/**********************************************************************************/
+/**********************************************************************************/
+
+CustomView::CustomView(BuilderWindow *builder,QGraphicsView *parent) : QGraphicsView(parent){
+    setInteractive(true);
+    mousepressed = false;
+    m_rubberBandActive = false;
+    rubberBand = NULL;
+    this->builder = builder;
+
+//        QGLWidget *viewport = new QGLWidget(QGLFormat(QGL::SampleBuffers));
+//        setViewport(viewport);
+
+    setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
+    setDragMode(QGraphicsView::RubberBandDrag);
+    setOptimizationFlags(QGraphicsView::DontSavePainterState |QGraphicsView::DontAdjustForAntialiasing);
+    setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
+    setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+
+}
+
+void CustomView::setEditingMode(bool editing)
+{
+    editingMode = editing;
+    if(scene()){
+        ((BuilderScene*)scene())->editingMode = editingMode;
+    }
+}
+
+bool CustomView::getEditingMode()
+{
+    return editingMode;
+}
+
+
+void CustomView::wheelEvent(QWheelEvent *event){
+    if(event->modifiers() == Qt::CTRL){
+        if(event->delta() > 0){
+            scale(1.1,1.1);
+        }else{
+            scale(0.9,0.9);
+        }
+
+        return;
+    }
+    QGraphicsView::wheelEvent(event);
+}
+
+void CustomView::keyPressEvent(QKeyEvent *event){
+    if(event->key() == Qt::Key_A && event->modifiers() == Qt::CTRL){
+        foreach (QGraphicsItem *it, items()) {
+            it->setSelected(true);
+        }
+    }
+    if(editingMode && event->key() == Qt::Key_Delete){
+        deleteSelectedItems();
+        QGraphicsView::keyPressEvent(event);
+        return;
+    }
+    if(editingMode && event->key() == Qt::Key_C && event->modifiers() == Qt::CTRL){
+        QGraphicsView::keyPressEvent(event);
+        copySelectedItems();
+        return;
+    }
+    if(editingMode && event->key() == Qt::Key_V && event->modifiers() == Qt::CTRL){
+        QGraphicsView::keyPressEvent(event);
+        pasteSelectedItems(QPoint());
+        return;
+    }
+    QGraphicsView::keyPressEvent(event);
+}
+
+void CustomView::mousePressEvent(QMouseEvent* event)
+{
+    origin = event->pos();
+    if(event->button()==Qt::LeftButton){
+        if(event->modifiers()==Qt::ControlModifier){
+            setDragMode(QGraphicsView::ScrollHandDrag);
+
+            QGraphicsView::mousePressEvent(event);
+            return;
+        }else{
+            if(itemAt(event->pos()) == NULL){
+                setDragMode(QGraphicsView::RubberBandDrag);
+                pressedNullItem();
+                QGraphicsView::mousePressEvent(event);
+                return;
+            }else{
+                setDragMode(QGraphicsView::NoDrag);
+                QGraphicsView::mousePressEvent(event);
+                return;
+            }
+        }
+    }
+
+    setDragMode(QGraphicsView::NoDrag);
+    QGraphicsView::mousePressEvent(event);
+
+}
+
+void CustomView::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu menu(this);
+    QGraphicsItem *it = itemAt(event->pos());
+    QAction *copyAction = NULL;
+    QAction *pasteAction = NULL;
+    QAction *deleteAction = NULL;
+
+    if(editingMode){
+        if(!it){
+            QAction *addSourcePortAction = menu.addAction("Add Source Port");
+            QAction *addDestinationPortAction = menu.addAction("Add Destination Port");
+            menu.addSeparator();
+            pasteAction = menu.addAction("Paste");
+
+            if(!copiedItems.isEmpty()){
+                pasteAction->setEnabled(true);
+            }else{
+                pasteAction->setEnabled(false);
+            }
+
+
+            QAction *act = menu.exec(event->globalPos());
+            if(act == addSourcePortAction){
+                addSourcePort("Source",event->pos());
+            }
+            if(act == addDestinationPortAction){
+                addDestinationPort("Destination",event->pos());
+            }
+            if(act == pasteAction){
+                pasteSelectedItems(event->pos());
+            }
+            return;
+        }
+
+
+        copyAction = menu.addAction("Copy");
+        pasteAction = menu.addAction("Paste");
+        deleteAction = menu.addAction("Delete");
+        menu.addSeparator();
+
+        if(!it){
+            copyAction->setEnabled(false);
+            deleteAction->setEnabled(false);
+        }
+        if(!copiedItems.isEmpty()){
+            pasteAction->setEnabled(true);
+        }else{
+            pasteAction->setEnabled(false);
+        }
+    }else{
+        if(it){
+            if(it->type() == QGraphicsItem::UserType + ModuleItemType ||
+               it->type() == QGraphicsItem::UserType + ConnectionItemType){
+                BuilderItem *bItem = (BuilderItem*)it;
+
+                foreach(QAction *act, bItem->getActions()){
+                    menu.addAction(act);
+                }
+            }
+        }else{
+            foreach(QAction *act, builder->builderActions){
+                menu.addAction(act);
+            }
+        }
+
+
+    }
+
+
+
+
+
+    if(menu.isEmpty()){
+        return;
+    }
+
+    QAction *act = menu.exec(event->globalPos());
+    if(!act){
+        return;
+    }
+
+    if(act == deleteAction){
+        if(it && it->type() == QGraphicsItem::UserType + (int)HandleItemType){
+            deleteSelectedItems(it);
+        }else{
+            deleteSelectedItems();
+        }
+    }
+    if(act == copyAction){
+        copySelectedItems();
+    }
+    if(act == pasteAction){
+        pasteSelectedItems(event->pos());
+    }
+
+    update();
+
+}
+
+
+void CustomView::deleteAllItems(){
+    QList <QGraphicsItem*>selectedItems;
+
+
+    foreach (QGraphicsItem* item, items()) {
+        if(item->type() != QGraphicsItem::UserType + (int)ModulePortItemType &&
+                item->type() != QGraphicsItem::UserType + (int)ArrowLabelItemType &&
+                item->parentItem() == NULL){
+            selectedItems.append(item);
+        }
+    }
+
+    foreach (QGraphicsItem* item, selectedItems) {
+
+        if(item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
+            if(selectedItems.removeOne(item)){
+                builder->itemsList.removeOne(item);
+                delete item;
+            }
+        }
+
+    }
+
+    foreach (QGraphicsItem* item, selectedItems) {
+        if(item->type() == QGraphicsItem::UserType + (int)ModuleItemType ||
+           item->type() == QGraphicsItem::UserType + (int)SourcePortItemType ||
+           item->type() == QGraphicsItem::UserType + (int)DestinationPortItemType ||
+           item->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
+            if(selectedItems.removeOne(item)){
+                builder->itemsList.removeOne(item);
+                delete item;
+            }
+        }
+
+    }
+    modified();
+}
+
+
+void CustomView::deleteSelectedItems(QGraphicsItem *it){
+    copiedItems.clear();
+    QList <QGraphicsItem*>selectedItems;
+    bool deleteOnlyHandle = false;
+    if(it && it->type() == QGraphicsItem::UserType + (int)HandleItemType){
+        deleteOnlyHandle  = true;
+    }
+
+    foreach (QGraphicsItem* item, items()) {
+        if(item->isSelected() &&
+                item->type() != QGraphicsItem::UserType + (int)ModulePortItemType &&
+                item->type() != QGraphicsItem::UserType + (int)ArrowLabelItemType &&
+                item->parentItem() == NULL){
+            selectedItems.append(item);
+        }
+    }
+
+    foreach (QGraphicsItem* item, selectedItems) {
+        if(item->type() == QGraphicsItem::UserType + (int)HandleItemType){
+            selectedItems.removeOne(item);
+            builder->itemsList.removeOne(item);
+            delete item;
+        }
+
+    }
+
+    if(deleteOnlyHandle){
+        return;
+    }
+
+    foreach (QGraphicsItem* item, selectedItems) {
+
+        if(item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
+            if(selectedItems.removeOne(item)){
+                builder->itemsList.removeOne(item);
+                delete item;
+            }
+        }
+
+    }
+
+    foreach (QGraphicsItem* item, selectedItems) {
+        if(item->type() == QGraphicsItem::UserType + (int)ModuleItemType ||
+           item->type() == QGraphicsItem::UserType + (int)SourcePortItemType ||
+           item->type() == QGraphicsItem::UserType + (int)DestinationPortItemType ||
+           item->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
+            if(selectedItems.removeOne(item)){
+                builder->itemsList.removeOne(item);
+                delete item;
+            }
+
+        }
+
+    }
+    modified();
+}
+
+void CustomView::copySelectedItems(){
+    copiedItems.clear();
+
+    foreach (QGraphicsItem* item, items()) {
+        if(item->isSelected()){
+            if(item->type() == QGraphicsItem::UserType + (int)SourcePortItemType ||
+                    item->type() == QGraphicsItem::UserType + (int)DestinationPortItemType ||
+                    item->type() == QGraphicsItem::UserType + (int)ModuleItemType ||
+                    item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
+
+                copiedItems.append(item);
+            }
+        }
+    }
+}
+
+void CustomView::pasteSelectedItems(QPoint pos){
+
+    foreach (QGraphicsItem* item, items()) {
+        item->setSelected(false);
+    }
+
+    bool firstAdded = true;
+    QSize offset;
+
+    QMap <QGraphicsItem*,QGraphicsItem*> pastedItems;
+    QList <QGraphicsItem*> itemsToRemove;
+    foreach (QGraphicsItem* item, copiedItems) {
+        if(item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
+            Arrow *arrow = ((Arrow*)item);
+            BuilderItem *startItem = arrow->startItem();
+            BuilderItem *endItem = arrow->endItem();
+
+            BuilderItem *copiedStartItem = NULL;
+            BuilderItem *copiedEndItem = NULL;
+
+            PortItem *startPort = NULL;
+            PortItem *endPort = NULL;
+
+            if(startItem->type() == QGraphicsItem::UserType + (int)ModulePortItemType){
+                startPort = (PortItem*)startItem;
+                startItem = (ModuleItem *)startPort->parentItem();
+            }
+
+            if(endItem->type() == QGraphicsItem::UserType + (int)ModulePortItemType){
+                endPort = (PortItem*)endItem;
+                endItem = (ModuleItem *)endPort->parentItem();
+            }
+
+            for(int i=0;i<itemsToRemove.count();i++){
+                if(itemsToRemove.at(i) == startItem){
+                    copiedStartItem = (BuilderItem*)pastedItems.value(startItem);
+                }
+                if(itemsToRemove.at(i) == endItem){
+                    copiedEndItem = (BuilderItem*)pastedItems.value(endItem);
+                }
+            }
+
+            bool startContained = false;
+            bool endContained = false;
+            for(int i=0;i<copiedItems.count();i++){
+                if(copiedItems.at(i) == startItem){
+                    startContained = true;
+                }
+                if(copiedItems.at(i) == endItem){
+                    endContained = true;
+                }
+            }
+
+
+
+            if(startContained && endContained){
+
+                BuilderItem *startConnection = NULL;
+                BuilderItem *endConnection = NULL;
+
+                if(startItem->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+                    // Start is a Port Module
+                    if(!copiedStartItem){
+                        copiedStartItem = pasteItem(startItem,&offset,&firstAdded,pos);
+                        itemsToRemove.append(startItem);
+                        pastedItems.insert(startItem,copiedStartItem);
+                    }
+
+                    int portIndex = ((ModuleItem *)startItem)->oPorts.indexOf(startPort);
+                    PortItem *newPort = ((ModuleItem *)copiedStartItem)->oPorts.at(portIndex);
+                    startConnection = newPort;
+
+
+
+                }else{
+                    if(!copiedStartItem){
+                        copiedStartItem = pasteItem(startItem,&offset,&firstAdded,pos);
+                        itemsToRemove.append(startItem);
+                        pastedItems.insert(startItem,copiedStartItem);
+                    }
+                    startConnection = copiedStartItem;
+
+                }
+
+                if(endItem->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+                    // Destination is a Port Module
+                    if(!copiedEndItem){
+                        copiedEndItem = pasteItem(endItem,&offset,&firstAdded,pos);
+                        itemsToRemove.append(endItem);
+                        pastedItems.insert(endItem,copiedEndItem);
+                    }
+
+
+                    int portIndex = ((ModuleItem *)endItem)->iPorts.indexOf(endPort);
+                    PortItem *newPort = ((ModuleItem *)copiedEndItem)->iPorts.at(portIndex);
+                    endConnection = newPort;
+
+
+                }else{
+                    if(!copiedEndItem){
+                        copiedEndItem = pasteItem(endItem,&offset,&firstAdded,pos);
+                        itemsToRemove.append(endItem);
+                        pastedItems.insert(endItem,copiedEndItem);
+                    }
+                    endConnection = copiedEndItem;
+
+                }
+
+
+                if(startConnection && endConnection){
+                    builder->onAddNewConnection(startConnection,endConnection);
+                }
+
+                itemsToRemove.append(item);
+
+            }
+        }
+    }
+
+
+
+
+    while(!itemsToRemove.isEmpty()) {
+        //item->setSelected(false);
+        copiedItems.removeOne(itemsToRemove.takeLast());
+    }
+
+
+    foreach (QGraphicsItem* item, copiedItems) {
+        pasteItem(item,&offset,&firstAdded,pos);
+    }
+
+
+    hide();
+    show();
+
+}
+
+
+BuilderItem *CustomView::pasteItem(QGraphicsItem *item, QSize *offset, bool *firstAdded,QPoint pos)
+{
+    BuilderItem *ret = NULL;
+    ModuleItem *mod = NULL;
+    SourcePortItem *sPort = NULL;
+    DestinationPortItem *dPort = NULL;
+    switch (item->type()) {
+    case QGraphicsItem::UserType + (int)SourcePortItemType:
+        sPort = ((SourcePortItem*)item);
+        if(pos.isNull()){
+            ret = builder->onAddSourcePort(QString("%1_copy").arg(sPort->getItemName().toLatin1().data()),
+                          QPointF(sPort->pos().x() + 20, sPort->pos().y() + 20));
+        }else{
+            if(copiedItems.count() <= 1){
+                 ret = builder->onAddSourcePort(QString("%1_copy").arg(sPort->getItemName().toLatin1().data()),
+                               QPointF(mapToScene(pos).x(), mapToScene(pos).y()));
+            }else{
+                if(*firstAdded){
+                     ret = builder->onAddSourcePort(QString("%1_copy").arg(sPort->getItemName().toLatin1().data()),
+                                   QPointF(mapToScene(pos).x(), mapToScene(pos).y()));
+                    *offset = QSize(mapToScene(pos).x() - sPort->pos().x(), mapToScene(pos).y() - sPort->pos().y());
+                }else{
+                     ret = builder->onAddSourcePort(QString("%1_copy").arg(sPort->getItemName().toLatin1().data()),
+                                   QPointF(offset->width() + sPort->pos().x(), offset->height() + sPort->pos().y()));
+                }
+
+            }
+        }
+        break;
+    case QGraphicsItem::UserType + (int)DestinationPortItemType:
+        dPort = ((DestinationPortItem*)item);
+        if(pos.isNull()){
+            ret = builder->onAddDestinationPort(QString("%1_copy").arg(dPort->getItemName().toLatin1().data()),
+                          QPointF(dPort->pos().x() + 20, dPort->pos().y() + 20));
+        }else{
+            if(copiedItems.count() <= 1){
+                 ret = builder->onAddDestinationPort(QString("%1_copy").arg(dPort->getItemName().toLatin1().data()),
+                               QPointF(mapToScene(pos).x(), mapToScene(pos).y()));
+            }else{
+                if(*firstAdded){
+                     ret = builder->onAddDestinationPort(QString("%1_copy").arg(dPort->getItemName().toLatin1().data()),
+                                   QPointF(mapToScene(pos).x(), mapToScene(pos).y()));
+                    *offset = QSize(mapToScene(pos).x() - dPort->pos().x(), mapToScene(pos).y() - dPort->pos().y());
+                }else{
+                     ret = builder->onAddDestinationPort(QString("%1_copy").arg(dPort->getItemName().toLatin1().data()),
+                                   QPointF(offset->width() + dPort->pos().x(), offset->height() + dPort->pos().y()));
+                }
+
+            }
+        }
+        break;
+    case QGraphicsItem::UserType + (int)ModuleItemType:
+        mod = ((ModuleItem*)item);
+        if(pos.isNull()){
+            ret = builder->onAddModule(mod->getInnerModule(),QPointF(mod->pos().x() + 20, mod->pos().y() + 20));
+        }else{
+            if(copiedItems.count() <= 1){
+                ret = builder->onAddModule(mod->getInnerModule(),QPointF(mapToScene(pos).x(), mapToScene(pos).y()));
+            }else{
+                if(*firstAdded){
+                    ret = builder->onAddModule(mod->getInnerModule(),QPointF(mapToScene(pos).x(), mapToScene(pos).y()));
+                    *offset = QSize(mapToScene(pos).x() - mod->pos().x(), mapToScene(pos).y() - mod->pos().y());
+                }else{
+                    ret = builder->onAddModule(mod->getInnerModule(),QPointF(offset->width() + mod->pos().x(), offset->height() + mod->pos().y()));
+                }
+
+            }
+
+        }
+        break;
+    default:
+        break;
+    }
+
+
+    *firstAdded = false;
+    return ret;
 }

@@ -7,24 +7,16 @@
 
 #define TRIANGLEH   (double)((double)PORT_LINE_WIDTH * (double)sqrt(3.0) ) / 2.0
 
-//ModuleItem::ModuleItem(QString itemName, QStringList inputPorts, QStringList outputPorts, BuilderItem *parent) : BuilderItem(parent)
-//{
-//    this->itemType = ModuleItemType;
-//    this->itemName = itemName;
-//    this->inputPorts = inputPorts;
-//    this->outputPorts = outputPorts;
-//    running = false;
 
-//    init();
-//}
-
-ModuleItem::ModuleItem(Module *module, int moduleId, bool isInApp,BuilderItem * parent) : BuilderItem(parent)
+ModuleItem::ModuleItem(Module *module, int moduleId, bool isInApp, bool editingMode, Manager *manager, BuilderItem * parent) : BuilderItem(parent)
 {
     sigHandler = new ItemSignalHandler();
     this->itemType = ModuleItemType;
     this->module = module;
     this->moduleId = moduleId;
     this->isInApp = isInApp;
+    this->editingMode = editingMode;
+    this->manager = manager;
     running = false;
     externalSelection = false;
     startingPoint = QPointF(10,10);
@@ -54,6 +46,7 @@ int ModuleItem::getId()
 {
     return moduleId;
 }
+
 
 void ModuleItem::setRunning(bool running)
 {
@@ -139,14 +132,27 @@ void ModuleItem::init()
 
 ModuleItem::~ModuleItem()
 {
+    setVisible(false);
+    delete sigHandler;
     foreach (PortItem *port, iPorts) {
         port->removeArrows();
+        scene()->removeItem(port);
+        delete port;
     }
     foreach (PortItem *port, oPorts) {
         port->removeArrows();
+        scene()->removeItem(port);
+        delete port;
     }
-    delete sigHandler;
+
     scene()->removeItem(this);
+
+    if(manager && editingMode){
+        Application* mainApplication = manager->getKnowledgeBase()->getApplication();
+        manager->getKnowledgeBase()->removeIModuleFromApplication(mainApplication,module->getLabel());
+        module = NULL;
+    }
+
 }
 
 
@@ -245,7 +251,6 @@ void ModuleItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
     setZValue(zValue() + 10);
-    QGraphicsItem::mousePressEvent(event);
     //sigHandler->moduleSelected(this);
     if(isInApp && isSelected()){
         parentItem()->setSelected(true);
@@ -263,13 +268,24 @@ QPointF ModuleItem::connectionPoint()
 void ModuleItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 
+    if(moved && editingMode){
+        GraphicModel modBase;
+        GyPoint p;
+        p.x = pos().x();
+        p.y = pos().y();
+        modBase.points.push_back(p);
+        module->setModelBase(modBase);
+        signalHandler()->modified();
+    }
     pressed = false;
     moved = false;
     setZValue(zValue() - 10);
-    QGraphicsItem::mouseReleaseEvent(event);
+
     if(isInApp && isSelected()){
         parentItem()->setSelected(true);
     }
+
+    QGraphicsItem::mouseReleaseEvent(event);
 }
 
 void ModuleItem::setModuleSelected(bool selected)

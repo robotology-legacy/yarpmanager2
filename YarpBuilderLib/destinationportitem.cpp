@@ -6,7 +6,8 @@
 #include <QLineEdit>
 
 
-DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<QGraphicsItem *> *itemsList,bool editOnStart, BuilderItem *parent) : BuilderItem(parent)
+DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<QGraphicsItem *> *itemsList,
+                                         bool editOnStart, Application *app, BuilderItem *parent) : BuilderItem(parent)
 {
     itemType = DestinationPortItemType;
     this->itemName = itemName;
@@ -16,6 +17,8 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<Q
     moved = false;
     this->isInApp = isInApp;
     this->itemsList = itemsList;
+    this->parent = parent;
+    this->app = app;
 
     QFontMetrics fontMetric(font);
     int textWidth = fontMetric.width(itemName);
@@ -62,6 +65,8 @@ DestinationPortItem::~DestinationPortItem()
 {
     removeArrows();
     delete sigHandler;
+    scene()->removeItem(lineEditWidget);
+    delete lineEditWidget;
     scene()->removeItem(this);
 }
 
@@ -194,7 +199,12 @@ QPointF DestinationPortItem::connectionPoint()
 
 void DestinationPortItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
-
+    if(moved){
+        sigHandler->modified();
+        foreach (Arrow *arrow, arrows) {
+            arrow->updateConnection();
+        }
+    }
     if(!moved && event->modifiers() == Qt::NoModifier && event->button() == Qt::LeftButton){
         signalHandler()->newConnectionAdded(connectionPoint(),this);
     }

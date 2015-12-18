@@ -10,8 +10,8 @@ void BuilderItem::addArrow(Arrow *arrow){
 void BuilderItem::removeArrows(){
     foreach (Arrow *arrow, arrows) {
         arrow->hide();
-        arrow->startItem()->removeArrow(arrow);
-        arrow->endItem()->removeArrow(arrow);
+//        arrow->startItem()->removeArrow(arrow);
+//        arrow->endItem()->removeArrow(arrow);
         delete arrow;
     }
 }

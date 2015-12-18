@@ -28,7 +28,8 @@ SOURCES += yarpbuilderlib.cpp \
     itemsignalhandler.cpp \
     moduleitem.cpp \
     sourceportitem.cpp \
-    builderwindow.cpp
+    builderwindow.cpp \
+    propertiestable.cpp
 
 HEADERS += yarpbuilderlib.h\
         yarpbuilderlib_global.h \
@@ -43,7 +44,8 @@ HEADERS += yarpbuilderlib.h\
     moduleitem.h \
     sourceportitem.h \
     ui_mainwindow.h \
-    builderwindow.h
+    builderwindow.h \
+    propertiestable.h
 
 unix {
     target.path = /usr/lib

@@ -619,6 +619,19 @@ void MainWindow::onTabClose(int index)
                 return;
             }
         }
+
+        if(aw->isModified() && aw->isEditingMode()){
+            QMessageBox::StandardButton btn = QMessageBox::question(this,"Save",QString("%1 has been modified\nDo you want to save it before closing?").arg(aw->getAppName().toLatin1().data()),
+                                                                    QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No | QMessageBox::StandardButton::Cancel);
+            if(btn == QMessageBox::StandardButton::Yes){
+                aw->save();
+                onReopenApplication(aw->getAppName(),aw->getFileName());
+            }
+            if(btn == QMessageBox::StandardButton::Cancel){
+                return;
+            }
+        }
+
         aw->closeManager();
     }
     ui->mainTabs->removeTab(index);
@@ -747,14 +760,14 @@ void MainWindow::onTabChangeItem(int index)
             builderToolBar = NULL;
         }
 
-        if(w){
-            BuilderWindow *b = (BuilderWindow*)ui->mainTabs->widget(index);
-            builderToolBar = b->getToolBar();
-            if(builderToolBar){
-                addToolBar(builderToolBar);
-                builderToolBar->show();
-            }
-        }
+//        if(w){
+//            BuilderWindow *b = (BuilderWindow*)ui->mainTabs->widget(index);
+//            builderToolBar = b->getToolBar();
+//            if(builderToolBar){
+//                addToolBar(builderToolBar);
+//                builderToolBar->show();
+//            }
+//        }
     }
 
 }

@@ -4,11 +4,13 @@
 #include <QGraphicsScene>
 #include <QGraphicsSceneDragDropEvent>
 
-class MyView;
+class CustomView;
+class BuilderWindow;
 
 class BuilderScene : public QGraphicsScene
 {
-    friend class MyView;
+    friend class CustomView;
+    friend class BuilderWindow;
     Q_OBJECT
 public:
     explicit BuilderScene(QObject *parent = 0);

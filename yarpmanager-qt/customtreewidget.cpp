@@ -28,7 +28,7 @@ CustomTreeWidget::CustomTreeWidget(QWidget *parent) : QTreeWidget(parent)
 */
 void CustomTreeWidget::mousePressEvent(QMouseEvent *e)
 {
-    QTreeWidget::mousePressEvent(e);
+
 
     if(e->button() == Qt::RightButton){
         if(itemAt(e->pos()) == NULL){
@@ -38,6 +38,7 @@ void CustomTreeWidget::mousePressEvent(QMouseEvent *e)
             itemSelectionChanged();
         }
     }
+    QTreeWidget::mousePressEvent(e);
 }
 
 /*! \brief the press event on an header

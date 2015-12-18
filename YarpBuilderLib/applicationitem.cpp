@@ -31,7 +31,11 @@ ApplicationItem::ApplicationItem(Application* application, Manager *manager,  QL
 
 ApplicationItem::~ApplicationItem()
 {
-
+    if(editingMode && mainAppManager){
+        Application* mainApplication = mainAppManager->getKnowledgeBase()->getApplication();
+        mainAppManager->getKnowledgeBase()->removeIApplicationFromApplication(mainApplication,application->getLabel());
+        application = NULL;
+    }
 }
 
 Application* ApplicationItem::getInnerApplication()
@@ -56,192 +60,173 @@ void ApplicationItem::init()
     QFontMetrics fontMetric(font);
     int textWidth = fontMetric.width(itemName);
 
-//    prepareGeometryChange();
-//    mainRect = QRect(0,0,400,400);
-//    boundingR = QRectF(mainRect);
-
-
     /*********************************************************/
     ModulePContainer modules = mainAppManager->getKnowledgeBase()->getModules(application);
     CnnContainer connections = mainAppManager->getKnowledgeBase()->getConnections(application);
     ApplicaitonPContainer applications = mainAppManager->getKnowledgeBase()->getApplications(application);
     ExecutablePContainer exes = mainAppManager->getExecutables();
     yarp::manager::ExecutablePIterator moditr;
+    /*************************************/
 
+    ApplicationPIterator appItr;
+    for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
+    {
+        Application* application = (*appItr);
+        ApplicationItem *appItem = new ApplicationItem(application,mainAppManager,usedModulesId,true,editingMode,this);
+        //connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+        QObject::connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
+        //connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),sigHandler,SLOT(onApplicationSelected(QGraphicsItem*)));
+        appItem->setZValue(zValue());
+        appItem->init();
 
-    if(1){
-
-
-        /*************************************/
-
-
-        //CnnContainer connections = mainAppManager->getConnections();
-
-        /*************************************/
-
-        ApplicationPIterator appItr;
-        for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
-        {
-            Application* application = (*appItr);
-            ApplicationItem *appItem = new ApplicationItem(application,mainAppManager,usedModulesId,true,editingMode,this);
-            //connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-            QObject::connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
-            //connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),sigHandler,SLOT(onApplicationSelected(QGraphicsItem*)));
-            appItem->setZValue(zValue());
-            appItem->init();
-
-            if(application->getModelBase().points.size()>0){
-                appItem->setPos(application->getModelBase().points[0].x,
-                                application->getModelBase().points[0].y);
-            } else {
-                appItem->setPos(index%900+10,
-                                (index/900)*100+10);
-                index += 300;
-            }
-            itemsList.append(appItem);
-            updateSizes(appItem);
-
+        if(application->getModelBase().points.size()>0){
+            appItem->setPos(application->getModelBase().points[0].x,
+                    application->getModelBase().points[0].y);
+        } else {
+            appItem->setPos(index%900+10,
+                            (index/900)*100+10);
+            index += 300;
         }
+        itemsList.append(appItem);
+        updateSizes(appItem);
 
-        ModulePIterator itr;
-        //int n = application->sucCount();
-        //for(int i=0;i<n;i++){
-        for(itr=modules.begin(); itr!=modules.end(); itr++){
-            Module* module1 = (*itr); //dynamic_cast<Module*>(application->getLinkAt(i).to());
+    }
 
-            if(!editingMode){
-                for(moditr=exes.begin(); moditr<exes.end(); moditr++){
+    ModulePIterator itr;
+    //int n = application->sucCount();
+    //for(int i=0;i<n;i++){
+    for(itr=modules.begin(); itr!=modules.end(); itr++){
+        Module* module1 = (*itr); //dynamic_cast<Module*>(application->getLinkAt(i).to());
 
-                    Module* module = (*moditr)->getModule();
+        for(moditr=exes.begin(); moditr<exes.end(); moditr++){
 
-                    if(module == module1){
-                        QString id = QString("%1").arg((*moditr)->getID());
-                        usedModulesId->append(id.toInt());
-                        addModule(module,id.toInt());
-                        break;
-                    }
-                }
-            }else{
-                addModule(module1,-1);
+            Module* module = (*moditr)->getModule();
+
+            if(module == module1){
+                QString id = QString("%1").arg((*moditr)->getID());
+                usedModulesId->append(id.toInt());
+                addModule(module,id.toInt());
+                break;
             }
-
-        }
-
-
-
-        index = (index/900)*100+50;
-        CnnIterator citr;
-        ModulePContainer allModules = mainAppManager->getKnowledgeBase()->getSelModules();
-        int id = 0;
-        for(citr=connections.begin(); citr<connections.end(); citr++){
-            Connection baseCon = *citr;
-//            if(baseCon.owner()->getLabel() != application->getLabel()){
-//                continue;
-//            }
-            GraphicModel model = baseCon.getModelBase();
-            InputData* input = NULL;
-            OutputData* output = NULL;
-            BuilderItem *source = NULL;
-            BuilderItem *dest = NULL;
-            QString inModulePrefix,outModulePrefix;
-            findInputOutputData((*citr), allModules, input, output);
-            if(output){
-                source = findModelFromOutput(output);
-            }else{
-                bool bExist = false;
-                SourcePortItem *sourcePort = NULL;
-                for(int i=0;i<itemsList.count() && !bExist;i++){
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + SourcePortItemType)){
-                        SourcePortItem *auxSourceport = (SourcePortItem*)itemsList.at(i);
-                        if(auxSourceport->getItemName() == baseCon.from()){
-                            source = auxSourceport;
-                            bExist = true;
-                            break;
-                        }
-
-                    }
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
-                        // TODO
-                    }
-                }
-                if(!bExist){
-                    sourcePort = new SourcePortItem((*citr).from(),true,NULL,this);
-                    itemsList.append(sourcePort);
-                    //scene->addItem(sourcePort);
-                    source = sourcePort;
-
-                    if(model.points.size() > 1){
-                        source->setPos(model.points[1].x + source->boundingRect().width()/2,
-                                       model.points[1].y + source->boundingRect().height()/2);
-                    }else{
-                        source->setPos(10 + source->boundingRect().width()/2, index);
-                    }
-                    updateSizes(source);
-                }
-
-
-                index += 40;
-            }
-            if(input){
-                dest = findModelFromInput(input);
-            }else{
-                bool bExist = false;
-                DestinationPortItem *destPort = NULL;
-                for(int i=0;i<itemsList.count() && !bExist;i++){
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + DestinationPortItemType)){
-                        DestinationPortItem *auxDestPort = (DestinationPortItem*)itemsList.at(i);
-                        if(auxDestPort->getItemName() == baseCon.to()){
-                            dest = auxDestPort;
-                            bExist = true;
-                            break;
-                        }
-                    }
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
-                        // TODO
-                    }
-                }
-                if(!bExist){
-                    destPort = new DestinationPortItem((*citr).to(),true,false,this);
-                    itemsList.append(destPort);
-                    dest = destPort;
-
-                    //scene->addItem(destPort);
-                    size_t size = model.points.size();
-                    if(size > 2){
-                        dest->setPos(model.points[size-1].x + dest->boundingRect().width()/2,
-                                       model.points[size-1].y + dest->boundingRect().height()/2);
-                    }else{
-                        dest->setPos(400 + dest->boundingRect().width()/2, index);
-                    }
-                    updateSizes(dest);
-                }
-
-
-             }
-
-            Arrow *arrow;
-            // check for arbitrators
-            string strCarrier = baseCon.carrier();
-            if((strCarrier.find("recv.priority") != std::string::npos)){
-                // TODO
-            }else{
-                if(source && dest){
-
-                    arrow = new Arrow(source, dest, baseCon,id,NULL,true,this);
-                    QObject::connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
-                    arrow->setColor(QColor(Qt::red));
-                    source->addArrow(arrow);
-                    dest->addArrow(arrow);
-                    //scene->addItem(arrow);
-                    arrow->setZValue(zValue()+1);
-                    arrow->updatePosition();
-                    itemsList.append(arrow);
-                }
-            }
-            id++;
         }
 
     }
+
+
+
+    index = (index/900)*100+50;
+    CnnIterator citr;
+    ModulePContainer allModules = mainAppManager->getKnowledgeBase()->getSelModules();
+    int id = 0;
+    for(citr=connections.begin(); citr<connections.end(); citr++){
+        Connection baseCon = *citr;
+        //            if(baseCon.owner()->getLabel() != application->getLabel()){
+        //                continue;
+        //            }
+        GraphicModel model = baseCon.getModelBase();
+        InputData* input = NULL;
+        OutputData* output = NULL;
+        BuilderItem *source = NULL;
+        BuilderItem *dest = NULL;
+        QString inModulePrefix,outModulePrefix;
+        findInputOutputData((*citr), allModules, input, output);
+        if(output){
+            source = findModelFromOutput(output);
+        }else{
+            bool bExist = false;
+            SourcePortItem *sourcePort = NULL;
+            for(int i=0;i<itemsList.count() && !bExist;i++){
+                if(itemsList.at(i)->type() == (QGraphicsItem::UserType + SourcePortItemType)){
+                    SourcePortItem *auxSourceport = (SourcePortItem*)itemsList.at(i);
+                    if(auxSourceport->getItemName() == baseCon.from()){
+                        source = auxSourceport;
+                        bExist = true;
+                        break;
+                    }
+
+                }
+                if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
+                    // TODO
+                }
+            }
+            if(!bExist){
+                sourcePort = new SourcePortItem((*citr).from(),true,NULL,false,application,this);
+                itemsList.append(sourcePort);
+                //scene->addItem(sourcePort);
+                source = sourcePort;
+
+                if(model.points.size() > 1){
+                    source->setPos(model.points[1].x + source->boundingRect().width()/2,
+                            model.points[1].y + source->boundingRect().height()/2);
+                }else{
+                    source->setPos(10 + source->boundingRect().width()/2, index);
+                }
+                updateSizes(source);
+            }
+
+
+            index += 40;
+        }
+        if(input){
+            dest = findModelFromInput(input);
+        }else{
+            bool bExist = false;
+            DestinationPortItem *destPort = NULL;
+            for(int i=0;i<itemsList.count() && !bExist;i++){
+                if(itemsList.at(i)->type() == (QGraphicsItem::UserType + DestinationPortItemType)){
+                    DestinationPortItem *auxDestPort = (DestinationPortItem*)itemsList.at(i);
+                    if(auxDestPort->getItemName() == baseCon.to()){
+                        dest = auxDestPort;
+                        bExist = true;
+                        break;
+                    }
+                }
+                if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
+                    // TODO
+                }
+            }
+            if(!bExist){
+                destPort = new DestinationPortItem((*citr).to(),true,NULL,false,application,this);
+                itemsList.append(destPort);
+                dest = destPort;
+
+                //scene->addItem(destPort);
+                size_t size = model.points.size();
+                if(size > 2){
+                    dest->setPos(model.points[size-1].x + dest->boundingRect().width()/2,
+                            model.points[size-1].y + dest->boundingRect().height()/2);
+                }else{
+                    dest->setPos(400 + dest->boundingRect().width()/2, index);
+                }
+                updateSizes(dest);
+            }
+
+
+        }
+
+        Arrow *arrow;
+        // check for arbitrators
+        string strCarrier = baseCon.carrier();
+        if((strCarrier.find("recv.priority") != std::string::npos)){
+            // TODO
+        }else{
+            if(source && dest){
+
+                arrow = new Arrow(source, dest, baseCon,id,NULL,true,editingMode,this);
+                QObject::connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
+                arrow->setColor(QColor(Qt::red));
+                source->addArrow(arrow);
+                dest->addArrow(arrow);
+                //scene->addItem(arrow);
+                arrow->setZValue(zValue()+1);
+                arrow->updatePosition();
+                itemsList.append(arrow);
+            }
+        }
+        id++;
+    }
+
+
 
 
 
@@ -291,7 +276,7 @@ QPointF ApplicationItem::connectionPoint()
 
 BuilderItem * ApplicationItem::addModule(Module *module,int moduleId)
 {
-    ModuleItem *it = new ModuleItem(module,moduleId,true,this);
+    ModuleItem *it = new ModuleItem(module,moduleId,true,editingMode,mainAppManager,this);
     QObject::connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),sigHandler,SLOT(onModuleSelected(QGraphicsItem*)));
     QObject::connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),((BuilderScene*)scene()),SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     QObject::connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),((BuilderScene*)scene()),SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
@@ -348,12 +333,12 @@ void ApplicationItem::updateSizes(BuilderItem *it)
 void ApplicationItem::updateBoundingRect()
 {
     if(minx < 25){
-       qreal diff = 25 - minx;
-       foreach (QGraphicsItem *it, itemsList) {
-           qreal newPos = it->pos().x() + diff;
-           it->setPos(newPos,it->pos().y());
-       }
-       mainRect.setWidth(maxw + 25 + diff);
+        qreal diff = 25 - minx;
+        foreach (QGraphicsItem *it, itemsList) {
+            qreal newPos = it->pos().x() + diff;
+            it->setPos(newPos,it->pos().y());
+        }
+        mainRect.setWidth(maxw + 25 + diff);
 
     }else{
         qreal diff = minx - 25;
@@ -365,12 +350,12 @@ void ApplicationItem::updateBoundingRect()
     }
 
     if(miny < 25){
-       qreal diff = 25 - miny;
-       foreach (QGraphicsItem *it, itemsList) {
-           qreal newPos = it->pos().y() + diff;
-           it->setPos(it->pos().x() ,newPos);
-       }
-       mainRect.setHeight(maxh + 25 + diff);
+        qreal diff = 25 - miny;
+        foreach (QGraphicsItem *it, itemsList) {
+            qreal newPos = it->pos().y() + diff;
+            it->setPos(it->pos().x() ,newPos);
+        }
+        mainRect.setHeight(maxh + 25 + diff);
 
     }else{
         qreal diff = miny - 25;
@@ -398,31 +383,31 @@ void ApplicationItem::findInputOutputData(Connection& cnn,  ModulePContainer &mo
     ModulePIterator itr;
     for(itr=modules.begin(); itr!=modules.end(); itr++)
     {
-       Module* module = (*itr);
-       //if(module->owner() == application)
-       {
-           for(int i=0; i<module->inputCount(); i++)
-           {
-               InputData &input = module->getInputAt(i);
-               string strInput = string(module->getPrefix()) + string(input.getPort());
-               if(strTo == strInput)
-               {
-                   input_ = &input;
-                   break;
-               }
-           }
+        Module* module = (*itr);
+        //if(module->owner() == application)
+        {
+            for(int i=0; i<module->inputCount(); i++)
+            {
+                InputData &input = module->getInputAt(i);
+                string strInput = string(module->getPrefix()) + string(input.getPort());
+                if(strTo == strInput)
+                {
+                    input_ = &input;
+                    break;
+                }
+            }
 
-           for(int i=0; i<module->outputCount(); i++)
-           {
-               OutputData &output = module->getOutputAt(i);
-               string strOutput = string(module->getPrefix()) + string(output.getPort());
-               if(strFrom == strOutput)
-               {
-                   output_ = &output;
-                   break;
-               }
-           }
-       }
+            for(int i=0; i<module->outputCount(); i++)
+            {
+                OutputData &output = module->getOutputAt(i);
+                string strOutput = string(module->getPrefix()) + string(output.getPort());
+                if(strFrom == strOutput)
+                {
+                    output_ = &output;
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -443,10 +428,10 @@ PortItem* ApplicationItem::findModelFromOutput(OutputData* output)
                         //if(!strcmp(port->outData.getPort(), (*output).getPort()) && modulePrefix == prefix)  {
                         if(port->outData == output)
                             return port;
-                        }
                     }
                 }
             }
+        }
 
 
 
@@ -551,14 +536,14 @@ QList <QGraphicsItem*>* ApplicationItem::getModulesList()
 void ApplicationItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     moved = true;
-//    if(pressed){
-//        foreach (PortItem *port, iPorts) {
-//            port->updateConnections();
-//        }
-//        foreach (PortItem *port, oPorts) {
-//            port->updateConnections();
-//        }
-//    }
+    //    if(pressed){
+    //        foreach (PortItem *port, iPorts) {
+    //            port->updateConnections();
+    //        }
+    //        foreach (PortItem *port, oPorts) {
+    //            port->updateConnections();
+    //        }
+    //    }
     QGraphicsItem::mouseMoveEvent(event);
 }
 
@@ -566,8 +551,8 @@ void ApplicationItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
     //setZValue(zValue() + 10);
-    QGraphicsItem::mousePressEvent(event);
     sigHandler->applicationSelected(this);
+    QGraphicsItem::mousePressEvent(event);
 }
 void ApplicationItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
@@ -702,17 +687,17 @@ void ApplicationItem::setOutputPortAvailable(QString oData, bool available)
 
 
         }else
-        if(item->type() == QGraphicsItem::UserType + ApplicationItemType){
-            ApplicationItem *app = (ApplicationItem*)item;
-            app->setOutputPortAvailable(oData, available);
-        }else
-            if(item->type() == QGraphicsItem::UserType + SourcePortItemType){
-                SourcePortItem *source = (SourcePortItem*)item;
-                QString strPort = QString("%1").arg(source->getItemName());
-                if(strPort == oData){
-                    source->setAvailable(available);
+            if(item->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *app = (ApplicationItem*)item;
+                app->setOutputPortAvailable(oData, available);
+            }else
+                if(item->type() == QGraphicsItem::UserType + SourcePortItemType){
+                    SourcePortItem *source = (SourcePortItem*)item;
+                    QString strPort = QString("%1").arg(source->getItemName());
+                    if(strPort == oData){
+                        source->setAvailable(available);
+                    }
                 }
-            }
     }
 }
 

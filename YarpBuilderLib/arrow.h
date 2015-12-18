@@ -72,17 +72,17 @@ public:
     friend class LineHandle;
 
     Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp = false,
-      BuilderItem *parent = 0);
+          bool editingMode = false,BuilderItem *parent = 0);
     Arrow(BuilderItem *startItem, BuilderItem *endItem, yarp::manager::Connection connection,
-          int id, Manager *safeManager,bool isInApp = false,
-      BuilderItem *parent = 0);
+          int id, Manager *safeManager,bool isInApp = false, bool editingMode = false,BuilderItem *parent = 0);
     QPointF connectionPoint();
     void setConnected(bool);
     int getId();
     QString getFrom();
     QString getTo();
-    void deleteConnection();
+    void removeConnectionFromApp();
     void setConnectionSelected(bool selected);
+    void updateConnection(bool init = false);
 
     ~Arrow();
     int type() const  { return (int)QGraphicsItem::UserType + (int)itemType; }
@@ -103,13 +103,13 @@ protected:
     //void mousePressEvent(QGraphicsSceneMouseEvent *event);
     QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
-private:
-    void updateConnection();
+
 private:
     Manager *manager;
     GraphicModel model;
     bool externalSelection;
     bool isInApp;
+    bool editingMode;
     bool connected;
     yarp::manager::Connection connection;
     BuilderItem *myStartItem;

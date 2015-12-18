@@ -19,8 +19,10 @@ class Arrow;
 
 class SourcePortItem : public BuilderItem
 {
+    friend class Arrow;
 public:
-    SourcePortItem(QString itemName, bool isInApp = false, QList<QGraphicsItem *> *itemsList = NULL,bool editOnStart = false, BuilderItem * parent = 0);
+    SourcePortItem(QString itemName, bool isInApp = false, QList<QGraphicsItem *> *itemsList = NULL,
+                   bool editOnStart = false, Application *app = NULL,BuilderItem * parent = 0);
     ~SourcePortItem();
     QRectF boundingRect() const;
     QPointF connectionPoint();
@@ -30,6 +32,8 @@ public:
     void editingFinished();
 
 private:
+    Application *app;
+    BuilderItem *parent;
     bool portAvailable;
     bool isInApp;
     QGraphicsProxyWidget *lineEditWidget;

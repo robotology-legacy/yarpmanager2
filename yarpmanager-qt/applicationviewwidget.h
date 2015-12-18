@@ -72,6 +72,8 @@ public:
     QString getFileName();
     QString getAppName();
 
+    bool isEditingMode();
+
 
 private:
     bool getConRowByID(int id, int *row);

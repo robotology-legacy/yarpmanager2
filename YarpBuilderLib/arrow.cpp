@@ -40,6 +40,8 @@
 
 
 #include "arrow.h"
+#include "destinationportitem.h"
+#include "sourceportitem.h"
 
 #include <math.h>
 
@@ -51,9 +53,10 @@
 
 const qreal Pi = 3.14;
 
-Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp,BuilderItem *parent)
+Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp,bool editingMode,BuilderItem *parent)
     : BuilderItem(parent)
 {
+    itemType = ConnectionItemType;
     sigHandler = new ItemSignalHandler();
     myStartItem = startItem;
     myEndItem = endItem;
@@ -66,25 +69,26 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
     myColor = Qt::black;
     this->textLbl = NULL;
     this->isInApp = isInApp;
+    this->editingMode = editingMode;
     firstTime = true;
-    Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
+    //Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
 
 
-    updateConnection();
-
-    connection = safeManager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
+    updateConnection(true);
+   //connection = safeManager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
 
 
 
 
     textLbl = new Label(connection.carrier(),this);
+    textLbl->show();
     qDebug() << textLbl->type();
 
 
 
 }
 
-Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int id, Manager *safeManager, bool isInApp, BuilderItem *parent)
+Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int id, Manager *safeManager, bool isInApp,bool editingMode, BuilderItem *parent)
     : BuilderItem(parent)
 {
     sigHandler = new ItemSignalHandler();
@@ -102,6 +106,7 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int 
     this->connection = conn;
     this->id = id;
     this->isInApp = isInApp;
+    this->editingMode = editingMode;
     QString label = conn.carrier();
     if(!label.isEmpty()){
         textLbl = new Label(label,this);
@@ -111,8 +116,9 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int 
 
     firstTime = true;
 
-    setToolTip(QString("%1 --> %2").arg(startItem->itemName).arg(endItem->itemName));
+    setToolTip(QString("%1 --> %2").arg(myStartItem->itemName).arg(myEndItem->itemName));
 
+    //updateConnection(true);
 
 //    QGraphicsDropShadowEffect *effect = new QGraphicsDropShadowEffect();
 //    effect->setBlurRadius(5);
@@ -125,10 +131,12 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Connection conn, int 
 
 }
 
-void Arrow::updateConnection()
+void Arrow::updateConnection(bool init)
 {
-    if(manager){
-        Application* mainApplication = manager->getKnowledgeBase()->getApplication();
+    qDebug() << "updateConnection";
+    Application* mainApplication = NULL;
+    if((init || editingMode) && manager){
+        mainApplication = manager->getKnowledgeBase()->getApplication();
         manager->getKnowledgeBase()->removeConnectionFromApplication(mainApplication, connection);
     }
     QString label;
@@ -142,21 +150,7 @@ void Arrow::updateConnection()
 
     string strFrom,strTo ;
 
-
-    if(myEndItem->type() == (QGraphicsItem::UserType + (int)ModulePortItemType)){
-        PortItem *port = ((PortItem*)myEndItem);
-        ModuleItem *module = (ModuleItem *)port->parentItem();
-        int portType = port->getPortType();
-        if(portType == INPUT_PORT){
-            input = port->getInputData();
-            strTo = string(module->getInnerModule()->getPrefix()) + string(port->getInputData()->getPort());
-            label = QString("%1").arg(port->getInputData()->getCarrier());
-        }
-
-    }else if(myEndItem->type() == (QGraphicsItem::UserType + (int)DestinationPortItemType)){
-        strTo = string(myEndItem->getItemName().toLatin1().data());
-    }
-
+    // Source
     if(myStartItem->type() == (QGraphicsItem::UserType + (int)ModulePortItemType)){
         PortItem *port = ((PortItem*)myStartItem);
         ModuleItem *module = (ModuleItem *)port->parentItem();
@@ -165,46 +159,81 @@ void Arrow::updateConnection()
             output = port->getOutputData();
             strFrom = string(module->getInnerModule()->getPrefix()) + string(port->getOutputData()->getPort());
             label = QString("%1").arg(port->getOutputData()->getCarrier());
+
+            if(((ModuleItem*)port->parentItem())->getInnerModule()->owner() != mainApplication){
+                bExternFrom = true;
+            }
         }
 
     }else if(myStartItem->type() == (QGraphicsItem::UserType + (int)SourcePortItemType)){
         strFrom = string(myStartItem->getItemName().toLatin1().data());
+        bExternFrom = true;
     }
+
+    // Destination
+    if(myEndItem->type() == (QGraphicsItem::UserType + (int)ModulePortItemType)){
+        PortItem *port = ((PortItem*)myEndItem);
+        ModuleItem *module = (ModuleItem *)port->parentItem();
+        int portType = port->getPortType();
+        if(portType == INPUT_PORT){
+            input = port->getInputData();
+            strTo = string(module->getInnerModule()->getPrefix()) + string(port->getInputData()->getPort());
+            label = QString("%1").arg(port->getInputData()->getCarrier());
+
+            if(((ModuleItem*)port->parentItem())->getInnerModule()->owner() != mainApplication){
+                bExternTo = true;
+            }
+        }
+
+    }else if(myEndItem->type() == (QGraphicsItem::UserType + (int)DestinationPortItemType)){
+        strTo = string(myEndItem->getItemName().toLatin1().data());
+        bExternTo = true;
+
+    }
+
+
 
     if(label.isEmpty()){
-        label = "tcp";
+        label = "udp";
     }
+    QFontMetrics fontMetric(font);
+    textWidth = fontMetric.width(label);
+
+    if((init || editingMode) && mainApplication){
+
+        connection.setFrom(strFrom.c_str());
+        connection.setTo(strTo.c_str());
+        connection.setCarrier(label.toLatin1().data());
+        connection.setFromExternal(bExternFrom);
+        connection.setToExternal(bExternTo);
+        connection.setCorOutputData(output);
+        connection.setCorInputData(input);
+        //connection.setModel(this);
+
+        GyPoint p,p1,fakeLblPoint;
+        fakeLblPoint.x = 0;
+        fakeLblPoint.y = 0;
+        p.x = (myStartItem->pos()).x();
+        p.y = (myStartItem->pos()).y();
+        p1.x = (myEndItem->pos()).x();
+        p1.y = (myEndItem->pos()).y();
+        model.points.clear();
+        model.points.push_back(fakeLblPoint);
+        model.points.push_back(p);
+        model.points.push_back(p1);
+        connection.setModel(&model);
+        connection.setModelBase(model);
 
 
-    connection.setFrom(strFrom.c_str());
-    connection.setTo(strTo.c_str());
-    connection.setCarrier(label.toLatin1().data());
-    connection.setFromExternal(bExternFrom);
-    connection.setToExternal(bExternTo);
-    connection.setCorOutputData(output);
-    connection.setCorInputData(input);
-    //connection.setModel(this);
 
-    GyPoint p,p1;
-    p.x = myStartItem->pos().x();
-    p.y = myStartItem->pos().y();
-    p1.x = myEndItem->pos().x();
-    p1.y = myEndItem->pos().y();
-    model.points.clear();
-    model.points.push_back(p1);
-    model.points.push_back(p);
-    connection.setModel(&model);
-
-    if(manager){
-        Application* mainApplication = manager->getKnowledgeBase()->getApplication();
         connection = manager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
     }
 
 }
 
-void Arrow::deleteConnection()
+void Arrow::removeConnectionFromApp()
 {
-    if(manager){
+    if(editingMode && manager){
         Application* mainApplication = manager->getKnowledgeBase()->getApplication();
         manager->getKnowledgeBase()->removeConnectionFromApplication(mainApplication, connection);
     }
@@ -212,21 +241,28 @@ void Arrow::deleteConnection()
 
 Arrow::~Arrow()
 {
+    hide();
+    setToolTip("");
     startItem()->removeArrow(this);
     endItem()->removeArrow(this);
 
     foreach (LineHandle *handle, handleList) {
-        //scene()->removeItem(handle);
+        scene()->removeItem(handle);
         delete handle;
     }
     handleList.clear();
 
     if(textLbl){
-        //scene()->removeItem(textLbl);
+        scene()->removeItem(textLbl);
         delete textLbl;
     }
 
     scene()->removeItem(this);
+
+    if(editingMode && manager){
+        Application* mainApplication = manager->getKnowledgeBase()->getApplication();
+        manager->getKnowledgeBase()->removeConnectionFromApplication(mainApplication, connection);
+    }
 }
 void Arrow::setConnectionSelected(bool selected)
 {
@@ -297,7 +333,7 @@ void Arrow::updatePosition()
         boundingPolyline.append( mapFromItem(myEndItem,myEndItem->connectionPoint()));
     }
 
-    updateConnection();
+    //updateConnection();
     update();
 }
 
@@ -511,7 +547,7 @@ void LineHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = false;
 
-    QGraphicsRectItem::mouseReleaseEvent(event);
+
 
     QPainterPath newPath;
     newPath.addRect(scenePos().x() + rect().x() - 2,scenePos().y() + rect().y() - 2 ,rect().width() + 4,rect().height()+4);
@@ -520,6 +556,7 @@ void LineHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     scene()->setSelectionArea(newPath);
     parent->setFlag(QGraphicsItem::ItemIsMovable,true);
     parent->update();
+    QGraphicsRectItem::mouseReleaseEvent(event);
 }
 
 void LineHandle::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
@@ -559,7 +596,7 @@ Label::Label(QString label, QGraphicsItem *parent) : QGraphicsTextItem(label,par
 }
 Label::~Label()
 {
-    scene()->removeItem(this);
+    //scene()->removeItem(this);
 }
 void Label::currentComboTextChanged(QString text){
     setPlainText(text);

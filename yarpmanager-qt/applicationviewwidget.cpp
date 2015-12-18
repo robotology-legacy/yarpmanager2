@@ -113,6 +113,15 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,
     connect(builderWidget,SIGNAL(topLevelChanged(bool)),this,SLOT(onBuilderFloatChanged(bool)));
 
     if(!editingMode){
+        builder->addAction(modRunAction);
+        builder->addAction(modStopAction);
+        builder->addAction(modkillAction);
+        builder->addAction(modSeparator);
+        builder->addAction(modRefreshAction);
+        builder->addAction(modSelectAllAction);
+        builder->addAction(modAttachAction);
+        builder->addAction(modAssignAction);
+
         builder->addModulesAction(modRunAction);
         builder->addModulesAction(modStopAction);
         builder->addModulesAction(modkillAction);
@@ -1426,6 +1435,10 @@ bool ApplicationViewWidget::isRunning()
     return false;
 }
 
+bool ApplicationViewWidget::isEditingMode()
+{
+    return editingMode;
+}
 
 void ApplicationViewWidget::onSelfConnect(int which)
 {
