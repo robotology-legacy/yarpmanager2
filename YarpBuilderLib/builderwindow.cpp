@@ -67,7 +67,8 @@ void BuilderWindow::init()
 
     QVBoxLayout *layout = new QVBoxLayout;
     if(editingMode){
-        propertiesTab = new PropertiesTable();
+        propertiesTab = new PropertiesTable(&manager);
+        connect(propertiesTab,SIGNAL(modified()),this,SLOT(onModified()));
         propertiesTab->showApplicationTab(manager.getKnowledgeBase()->getApplication());
         splitter = new QSplitter;
         splitter->addWidget(view);
@@ -661,6 +662,14 @@ BuilderItem *BuilderWindow::onAddModule(void *mod,QPointF pos)
     if(module){
         string strPrefix = string("/") + module->getLabel();
         module->setBasePrefix(strPrefix.c_str());
+        //module->setBasePrefix(((Module*)mod)->getBasePrefix());
+        module->setBroker(((Module*)mod)->getBroker());
+        module->setHost(((Module*)mod)->getHost());
+        module->setParam(((Module*)mod)->getParam());
+        module->setWorkDir(((Module*)mod)->getWorkDir());
+        module->setStdio(((Module*)mod)->getStdio());
+
+
         string strAppPrefix = mainApplication->getBasePrefix();
         string prefix = strAppPrefix+module->getBasePrefix();
         manager.getKnowledgeBase()->setModulePrefix(module, prefix.c_str(), false);
@@ -745,6 +754,11 @@ void BuilderWindow::onModuleSelected(QGraphicsItem *it)
 
     Q_UNUSED(it);
     if(editingMode){
+        if(scene->selectedItems().count() > 1){
+            propertiesTab->addModules(((ModuleItem*)it)->getInnerModule());
+            return;
+        }
+
         propertiesTab->showModuleTab(((ModuleItem*)it)->getInnerModule());
         return;
     }

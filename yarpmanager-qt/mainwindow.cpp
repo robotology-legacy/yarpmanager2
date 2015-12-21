@@ -458,7 +458,14 @@ void MainWindow::viewModule(yarp::manager::Module *module)
 void MainWindow::viewApplication(yarp::manager::Application *app,bool editingMode)
 {
     for(int i=0;i<ui->mainTabs->count();i++){
-        if(ui->mainTabs->tabText(i) == app->getName()){
+        GenericViewWidget *w = (GenericViewWidget *)ui->mainTabs->widget(i);
+        if(w->getType() ==  yarp::manager::APPLICATION){
+            ApplicationViewWidget *a = (ApplicationViewWidget *)w;
+            if(a->getAppName() == app->getName()){
+                ui->mainTabs->setCurrentIndex(i);
+                return;
+            }
+        }else if(ui->mainTabs->tabText(i) == app->getName()){
             ui->mainTabs->setCurrentIndex(i);
             return;
         }
@@ -948,6 +955,20 @@ void MainWindow::onModified(bool mod)
 {
     ui->actionSave->setEnabled(mod);
     ui->actionSave_As->setEnabled(mod);
+    int index = ui->mainTabs->currentIndex();
+    GenericViewWidget *gw = (GenericViewWidget*)ui->mainTabs->currentWidget();
+    if(gw->getType() == yarp::manager::APPLICATION){
+        ApplicationViewWidget *w = (ApplicationViewWidget*)gw;
+        if(mod){
+            ui->mainTabs->setTabText(index,w->getAppName() + "*");
+        }else{
+            ui->mainTabs->setTabText(index,w->getAppName());
+        }
+    }
+
+
+
+
 
 //    if(mod){
 //        int index = ui->mainTabs->currentIndex();
