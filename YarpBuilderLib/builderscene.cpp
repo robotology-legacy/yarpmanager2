@@ -82,7 +82,6 @@ void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
         return;
     }
     event->setAccepted(true);
-    qDebug() << "Drag Move";
 }
 
 void BuilderScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -231,6 +230,33 @@ void BuilderScene::onNewConnectionAdded(QPointF p,QGraphicsItem *item)
                 return;
             }
 
+            // controllo di non cambiare una applicazione nested.
+            if(startItem->isNestedInApp() && endItem->isNestedInApp()){
+
+                BuilderItem *startParent;
+                BuilderItem *endParent;
+
+                if(startItem->type() == QGraphicsItem::UserType + (int)ModulePortItemType){
+                    startParent = (BuilderItem *)startItem->parentItem()->parentItem();
+                }else{
+                    startParent = (BuilderItem *)startItem->parentItem();
+                }
+
+                if(endItem->type() == QGraphicsItem::UserType + (int)ModulePortItemType){
+                    endParent = (BuilderItem *)endItem->parentItem()->parentItem();
+                }else{
+                    endParent = (BuilderItem *)endItem->parentItem();
+                }
+
+                if(startParent && endParent &&
+                   startParent->type() == QGraphicsItem::UserType + (int)ApplicationItemType &&
+                   endParent->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
+                    if(startParent == endParent){
+                        return;
+                    }
+                }
+            }
+
 
 
            if (startItem->allowOutputConnections() &&
@@ -274,10 +300,10 @@ void BuilderScene::snapToGrid(bool snap)
 {
     this->snap = snap;
     foreach (QGraphicsItem *it, items()) {
-//        if(it->type() == QGraphicsItem::UserType + (int)ConnectionItemType ||
-//            it->type() == QGraphicsItem::UserType + (int)HandleItemType){
-//            return;
-//        }
+        if(it->type() == QGraphicsItem::UserType + (int)HandleItemType ||
+            it->type() == QGraphicsItem::UserType + (int)ArrowLabelItemType){
+            continue;
+        }
 
         ((BuilderItem*)it)->snapToGrid(snap);
     }

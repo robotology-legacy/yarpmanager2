@@ -62,7 +62,39 @@ QT_END_NAMESPACE
 
 //class BuilderItem;
 class LineHandle;
-class Label;
+class Label : public QGraphicsTextItem
+{
+public:
+    Label(QString label, QGraphicsItem *parent = 0);
+    ~Label();
+    int type() const  { return UserType + (int)ArrowLabelItemType; }
+//    QRectF boundingRect() const;
+//    QPointF connectionPoint();
+    bool hasBeenMoved();
+    void setHasMoved(bool);
+    void currentComboTextChanged(QString text);
+    QString labelText();
+    void setText(QString);
+
+protected:
+    //void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event);
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+
+    QPointF computeTopLeftGridPoint(const QPointF &pointP);
+protected:
+    QGraphicsProxyWidget *comboWidget;
+    QString text;
+    ItemSignalHandler *sigHandler;
+    bool moved;
+    bool hasMoved;
+    bool pressed;
+    Arrow *parentArrow;
+    QPointF offset;
+};
 //class ItemSignalHandler;
 
 class Arrow : public BuilderItem
@@ -70,20 +102,24 @@ class Arrow : public BuilderItem
 public:
 
     friend class LineHandle;
+    friend class Label;
 
-    Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp = false,
-          bool editingMode = false,BuilderItem *parent = 0);
-    Arrow(BuilderItem *startItem, BuilderItem *endItem, yarp::manager::Connection connection,
-          int id, Manager *safeManager,bool isInApp = false, bool editingMode = false,BuilderItem *parent = 0);
+//    Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp = false,
+//          bool editingMode = false,BuilderItem *parent = 0);
+    Arrow(BuilderItem *startItem, BuilderItem *endItem,
+          int id, Manager *safeManager, bool nestedInApp = false, bool editingMode = false, BuilderItem *parent = 0);
     QPointF connectionPoint();
     void setConnected(bool);
     int getId();
     QString getFrom();
     QString getTo();
-    void removeConnectionFromApp();
+    //void removeConnectionFromApp();
+    void setConnection(Connection conn);
     void setConnectionSelected(bool selected);
-    void updateConnection(bool init = false);
-
+    //void updateConnection(bool init = false);
+    void updateModel();
+    void updateCarrier(QString carrier);
+    GraphicModel* getModel();
     ~Arrow();
     int type() const  { return (int)QGraphicsItem::UserType + (int)itemType; }
     QRectF boundingRect() const Q_DECL_OVERRIDE;
@@ -108,7 +144,7 @@ private:
     Manager *manager;
     GraphicModel model;
     bool externalSelection;
-    bool isInApp;
+
     bool editingMode;
     bool connected;
     yarp::manager::Connection connection;
@@ -116,7 +152,7 @@ private:
     BuilderItem *myEndItem;
     QColor myColor;
     QPolygonF arrowHead;
-    Label *textLbl;
+    Label textLbl;
     int textWidth;
     QFont font;
     //QLineF line;
@@ -146,32 +182,17 @@ protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0);
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+    QPointF computeTopLeftGridPoint(const QPointF &pointP);
 private:
     QPointF center;
     Arrow *parent;
     bool pressed;
     int rectSize;
+    QPointF offset;
 };
 
 
-class Label : public QGraphicsTextItem
-{
-public:
-    Label(QString label, QGraphicsItem *parent = 0);
-    ~Label();
-    int type() const  { return UserType + (int)ArrowLabelItemType; }
-//    QRectF boundingRect() const;
-//    QPointF connectionPoint();
 
-    void currentComboTextChanged(QString text);
-
-protected:
-    //void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
-    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event);
-protected:
-    QGraphicsProxyWidget *comboWidget;
-    QString text;
-    ItemSignalHandler *sigHandler;
-};
 
 #endif // ARROW_H

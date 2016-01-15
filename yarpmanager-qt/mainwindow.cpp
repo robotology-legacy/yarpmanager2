@@ -631,8 +631,13 @@ void MainWindow::onTabClose(int index)
             QMessageBox::StandardButton btn = QMessageBox::question(this,"Save",QString("%1 has been modified\nDo you want to save it before closing?").arg(aw->getAppName().toLatin1().data()),
                                                                     QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No | QMessageBox::StandardButton::Cancel);
             if(btn == QMessageBox::StandardButton::Yes){
-                aw->save();
-                onReopenApplication(aw->getAppName(),aw->getFileName());
+                bool ret = aw->save();
+                if(ret){
+                    onReopenApplication(aw->getAppName(),aw->getFileName());
+                }else{
+                    QMessageBox::critical(this,"Error",QString("Error Saving the file"));
+                    return;
+                }
             }
             if(btn == QMessageBox::StandardButton::Cancel){
                 return;
@@ -985,8 +990,12 @@ void MainWindow::onSave()
     yarp::manager::NodeType type = ((GenericViewWidget*)w)->getType();
     if(type == yarp::manager::APPLICATION){
         ApplicationViewWidget *ww = (ApplicationViewWidget*)w;
-        ww->save();
-        onReopenApplication(ww->getAppName(),ww->getFileName());
+        bool ret = ww->save();
+        if(ret){
+            onReopenApplication(ww->getAppName(),ww->getFileName());
+        }else{
+            QMessageBox::critical(this,"Error",QString("Error Saving the file"));
+        }
     }
 }
 

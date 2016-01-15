@@ -6,7 +6,7 @@
 class ApplicationItem : public BuilderItem
 {
 public:
-    ApplicationItem(Application* application, Manager *manager, QList <int> *, bool isInApp = false,bool editingMode = false, BuilderItem *parent = NULL);
+    ApplicationItem(Application* application, Manager *manager, QList <int> *, bool nestedInApp = false,bool editingMode = false, BuilderItem *parent = NULL);
     ~ApplicationItem();
 
     QRectF boundingRect() const;
@@ -46,7 +46,6 @@ protected:
 
 private:
     bool editingMode;
-    bool isInApp;
     QList <int> *usedModulesId;
     QFont customFont;
     int textWidth ;

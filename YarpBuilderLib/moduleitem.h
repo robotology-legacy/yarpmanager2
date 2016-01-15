@@ -29,7 +29,7 @@ class ModuleItem : public BuilderItem
 
 public:
    // ModuleItem(QString itemName, QStringList inputPorts, QStringList outputPorts , BuilderItem * parent = 0);
-     ModuleItem(Module *module, int moduleId, bool isInApp = false, bool editingMode = false,
+     ModuleItem(Module *module, int moduleId, bool nestedInApp = false, bool editingMode = false,
                 Manager *manager = NULL, BuilderItem * parent = 0);
     ~ModuleItem();
     QRectF boundingRect() const;
@@ -53,7 +53,6 @@ private:
 private:
     Manager *manager;
     bool externalSelection;
-    bool isInApp;
     bool editingMode;
     int moduleId;
     Module *module;

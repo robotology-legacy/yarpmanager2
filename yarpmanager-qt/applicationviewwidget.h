@@ -68,7 +68,7 @@ public:
     bool isBuilderFloating();
     void showBuilder(bool);
 
-    void save();
+    bool save();
     QString getFileName();
     QString getAppName();
 

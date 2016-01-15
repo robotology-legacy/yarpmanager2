@@ -15,7 +15,7 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<Q
     sigHandler = new ItemSignalHandler((QGraphicsItem*)this,DestinationPortItemType,NULL);
     pressed = false;
     moved = false;
-    this->isInApp = isInApp;
+    this->nestedInApp = isInApp;
     this->itemsList = itemsList;
     this->parent = parent;
     this->app = app;
@@ -24,7 +24,7 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<Q
     int textWidth = fontMetric.width(itemName);
 
     prepareGeometryChange();
-    mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-15,(2*PORT_TEXT_WIDTH) + textWidth,30);
+    mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,-16,(2*PORT_TEXT_WIDTH) + textWidth,32);
 
     boundingR = QRectF(mainRect);
 
@@ -32,7 +32,7 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<Q
 
     setFlag(ItemIsMovable,!isInApp);
     setFlag(ItemIsSelectable,true);
-    setFlag(ItemSendsGeometryChanges,true);
+    setFlag(ItemSendsGeometryChanges,!isInApp);
 
     if(!isInApp){
         QGraphicsDropShadowEffect *effect = new QGraphicsDropShadowEffect();
@@ -63,11 +63,12 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<Q
 
 DestinationPortItem::~DestinationPortItem()
 {
+    hide();
     removeArrows();
     delete sigHandler;
-    scene()->removeItem(lineEditWidget);
+    //scene()->removeItem(lineEditWidget);
     delete lineEditWidget;
-    scene()->removeItem(this);
+    //scene()->removeItem(this);
 }
 
 
@@ -84,7 +85,7 @@ void DestinationPortItem::paint(QPainter *painter, const QStyleOptionGraphicsIte
     }else{
         availableBrush = QBrush(QColor("#00E400"));
     }
-    if(!isInApp){
+    if(!nestedInApp){
         painter->setPen(QPen(availableBrush,BORDERWIDTH));
     }else{
         painter->setPen(QPen(availableBrush,BORDERWIDTH,Qt::DashLine));
@@ -199,10 +200,10 @@ QPointF DestinationPortItem::connectionPoint()
 
 void DestinationPortItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
-    if(moved){
+    if(moved && !nestedInApp){
         sigHandler->modified();
         foreach (Arrow *arrow, arrows) {
-            arrow->updateConnection();
+            arrow->updateModel();
         }
     }
     if(!moved && event->modifiers() == Qt::NoModifier && event->button() == Qt::LeftButton){
@@ -223,7 +224,7 @@ QVariant DestinationPortItem::itemChange(GraphicsItemChange change, const QVaria
         foreach (Arrow *arrow, arrows) {
             arrow->updatePosition();
         }
-        if(snap && !isInApp){
+        if(snap && !nestedInApp){
             QPointF newPos = value.toPointF();
             QPointF closestPoint = computeTopLeftGridPoint(newPos);
             return closestPoint+=offset;

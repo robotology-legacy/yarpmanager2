@@ -14,7 +14,7 @@ ModuleItem::ModuleItem(Module *module, int moduleId, bool isInApp, bool editingM
     this->itemType = ModuleItemType;
     this->module = module;
     this->moduleId = moduleId;
-    this->isInApp = isInApp;
+    this->nestedInApp = isInApp;
     this->editingMode = editingMode;
     this->manager = manager;
     running = false;
@@ -57,9 +57,9 @@ void ModuleItem::setRunning(bool running)
 void ModuleItem::init()
 {
 
-    setFlag(ItemIsMovable,!isInApp);
+    setFlag(ItemIsMovable,!nestedInApp);
     setFlag(ItemIsSelectable,true);
-    setFlag(ItemSendsGeometryChanges,true);
+    setFlag(ItemSendsGeometryChanges,!nestedInApp);
 
     pressed = false;
     moved = false;
@@ -69,12 +69,14 @@ void ModuleItem::init()
 
     QFontMetrics fontMetric(font);
     int textWidth = fontMetric.width(itemName);
+    int mod = textWidth % 16;
+    textWidth+=mod;
 
     prepareGeometryChange();
     mainRect = QRectF(-((2*PORT_TEXT_WIDTH) + textWidth)/2,
-                     -20,
+                     -PORT_LINE_WIDTH,
                      ((2*PORT_TEXT_WIDTH) + textWidth),
-                     40);
+                     2*PORT_LINE_WIDTH);
 
     boundingR = QRectF(mainRect);
 
@@ -89,14 +91,17 @@ void ModuleItem::init()
 
 
 
-        int newH = module->inputCount() * 2 * PORT_LINE_WIDTH;
-        if(mainRect.height() <= newH){
+        if(module->inputCount() > 1){
+            int newH = (module->inputCount() * 2 * PORT_LINE_WIDTH) ;
+            if(mainRect.height() <= newH){
 
-            mainRect.setY(mainRect.y() - newH/2);
-            mainRect.setHeight(mainRect.height() + newH/2);
-            boundingR.setY(mainRect.y());
-            boundingR.setHeight(mainRect.height());
+                mainRect.setY(-newH/2);
+                mainRect.setHeight(newH);
+                boundingR.setY(mainRect.y());
+                boundingR.setHeight(mainRect.height());
+            }
         }
+
     }
 
     if(module->outputCount() > 0){
@@ -106,20 +111,22 @@ void ModuleItem::init()
         prepareGeometryChange();
         boundingR.setWidth(boundingR.width() +  (PORT_LINE_WIDTH +TRIANGLEH/2.0) );
 
-        int newH = module->outputCount() * 2 * PORT_LINE_WIDTH;
-        if(mainRect.height() <= newH){
+        if(module->outputCount() > 1){
+            int newH = (module->outputCount() * 2 * PORT_LINE_WIDTH) ;
+            if(mainRect.height() <= newH){
 
-            mainRect.setY(mainRect.y() - newH/2);
-            mainRect.setHeight(mainRect.height() + newH/2);
-            boundingR.setY(mainRect.y());
-            boundingR.setHeight(mainRect.height());
+                mainRect.setY(-newH/2);
+                mainRect.setHeight(newH);
+                boundingR.setY(mainRect.y());
+                boundingR.setHeight(mainRect.height());
+            }
         }
     }
 
     qDebug() << mainRect;
 
 
-    if(!isInApp){
+    if(!nestedInApp){
         QGraphicsDropShadowEffect *effect = new QGraphicsDropShadowEffect();
         effect->setColor(QColor(80,80,80,80));
         effect->setBlurRadius(5);
@@ -132,20 +139,20 @@ void ModuleItem::init()
 
 ModuleItem::~ModuleItem()
 {
-    setVisible(false);
+    hide();
     delete sigHandler;
     foreach (PortItem *port, iPorts) {
         port->removeArrows();
-        scene()->removeItem(port);
+        //scene()->removeItem(port);
         delete port;
     }
     foreach (PortItem *port, oPorts) {
         port->removeArrows();
-        scene()->removeItem(port);
+        //scene()->removeItem(port);
         delete port;
     }
 
-    scene()->removeItem(this);
+    //scene()->removeItem(this);
 
     if(manager && editingMode){
         Application* mainApplication = manager->getKnowledgeBase()->getApplication();
@@ -163,34 +170,58 @@ int ModuleItem::type() const
 }
 void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
+    qreal partialH ;
     //painter->fillRect(boundingR,QBrush(Qt::red));
     //Input Ports
-    qreal partialH = (qreal)mainRect.height()/(qreal)((qreal)module->inputCount() + 1.0);
-    for(int i=0; i < module->inputCount(); i++){
-        painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
-        painter->drawLine(QPointF(mainRect.x() - PORT_LINE_WIDTH, mainRect.y() + ((i+1) * partialH )),
-                          QPointF(mainRect.x() , mainRect.y() + ((i+1) * partialH )));
-        PortItem *it = iPorts.at(i);
-        it->setPos(mainRect.x() - PORT_LINE_WIDTH,mainRect.y() + ((i+1) * partialH ));
+    if(module->inputCount() <= 1){
+        partialH = (qreal)mainRect.height()/(qreal)((qreal)module->inputCount() + 1.0);
+        for(int i=0; i < module->inputCount(); i++){
+            painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
+            painter->drawLine(QPointF(mainRect.x() - PORT_LINE_WIDTH, mainRect.y() + ((i+1) * partialH )),
+                              QPointF(mainRect.x() , mainRect.y() + ((i+1) * partialH )));
+            PortItem *it = iPorts.at(i);
+            it->setPos(mainRect.x() - PORT_LINE_WIDTH,mainRect.y() + ((i+1) * partialH ));
+        }
+    }else{
+        partialH = PORT_LINE_WIDTH;
+        for(int i=0; i < module->inputCount(); i++){
+            painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
+            painter->drawLine(QPointF(mainRect.x() - PORT_LINE_WIDTH, mainRect.y() + (partialH )),
+                              QPointF(mainRect.x() , mainRect.y() + (partialH )));
+            PortItem *it = iPorts.at(i);
+            it->setPos(mainRect.x() - PORT_LINE_WIDTH,mainRect.y() + (partialH ));
+            partialH += 2 * PORT_LINE_WIDTH;
+        }
     }
 
     //Output Ports ?????????
-    partialH = (qreal)mainRect.height()/(qreal)((qreal)module->outputCount() + 1.0);
-    for(int i=0; i < module->outputCount(); i++){
-        painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
+    if(module->outputCount() <= 1){
+        partialH = (qreal)mainRect.height()/(qreal)((qreal)module->outputCount() + 1.0);
+        for(int i=0; i < module->outputCount(); i++){
+            painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
 
-        painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + ((i+1) * partialH )),
-                          QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + ((i+1) * partialH )));
+            painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + ((i+1) * partialH )),
+                              QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + ((i+1) * partialH )));
+            PortItem *it = oPorts.at(i);
+            it->setPos(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH,mainRect.y() + ((i+1) * partialH ));
+        }
+    }else{
+        partialH = PORT_LINE_WIDTH;
+        for(int i=0; i < module->outputCount(); i++){
+            painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
 
-
-
-
-        PortItem *it = oPorts.at(i);
-        it->setPos(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH,mainRect.y() + ((i+1) * partialH ));
+            painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + (partialH )),
+                              QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + (partialH )));
+            PortItem *it = oPorts.at(i);
+            it->setPos(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH,mainRect.y() + (partialH ));
+            partialH += 2 * PORT_LINE_WIDTH;
+        }
     }
 
 
-    if(!isInApp){
+
+
+    if(!nestedInApp){
         if(!running){
             painter->setPen(QPen(QBrush(QColor("#BF0303")),BORDERWIDTH ));
         }else{
@@ -252,7 +283,7 @@ void ModuleItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
     pressed = true;
     setZValue(zValue() + 10);
     //sigHandler->moduleSelected(this);
-    if(isInApp && isSelected()){
+    if(nestedInApp && isSelected()){
         parentItem()->setSelected(true);
     }
     QGraphicsItem::mousePressEvent(event);
@@ -268,7 +299,7 @@ QPointF ModuleItem::connectionPoint()
 void ModuleItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 
-    if(moved && editingMode){
+    if(moved && editingMode && !nestedInApp){
         GraphicModel modBase;
         GyPoint p;
         p.x = pos().x();
@@ -281,7 +312,7 @@ void ModuleItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     moved = false;
     setZValue(zValue() - 10);
 
-    if(isInApp && isSelected()){
+    if(nestedInApp && isSelected()){
         parentItem()->setSelected(true);
     }
 
@@ -303,7 +334,7 @@ QVariant ModuleItem::itemChange(GraphicsItemChange change, const QVariant &value
         foreach (PortItem *port, oPorts) {
             port->updateConnections();
         }
-        if(snap  && !isInApp){
+        if(snap  && !nestedInApp){
             QPointF newPos = value.toPointF();
             QPointF closestPoint = computeTopLeftGridPoint(newPos);
             return closestPoint+=offset;

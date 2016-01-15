@@ -156,11 +156,13 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,
 
 }
 
-void ApplicationViewWidget::save()
+bool ApplicationViewWidget::save()
 {
+    bool ret = true;
     if(builder){
-        builder->save();
+        ret = builder->save();
     }
+    return ret;
 }
 
 QString ApplicationViewWidget::getFileName()

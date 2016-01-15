@@ -2,8 +2,8 @@
 #define COMMONS
 
 #define     BORDERWIDTH         2.0
-#define     PORT_TEXT_WIDTH     40
-#define     PORT_LINE_WIDTH     20
+#define     PORT_TEXT_WIDTH     32
+#define     PORT_LINE_WIDTH     16
 
 
 #define INPUT_PORT   0

@@ -9,7 +9,7 @@ void BuilderItem::addArrow(Arrow *arrow){
 }
 void BuilderItem::removeArrows(){
     foreach (Arrow *arrow, arrows) {
-        arrow->hide();
+        //arrow->hide();
 //        arrow->startItem()->removeArrow(arrow);
 //        arrow->endItem()->removeArrow(arrow);
         delete arrow;
@@ -80,3 +80,7 @@ void BuilderItem::setActions(QList<QAction*> acts)
     actions = acts;
 }
 
+bool BuilderItem::isNestedInApp()
+{
+    return nestedInApp;
+}

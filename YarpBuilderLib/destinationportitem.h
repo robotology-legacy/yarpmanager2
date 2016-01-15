@@ -20,7 +20,7 @@ class DestinationPortItem : public BuilderItem
 {
     friend class Arrow;
 public:
-    DestinationPortItem(QString itemName,bool isInApp = false, QList<QGraphicsItem *> *itemsList = NULL,
+    DestinationPortItem(QString itemName,bool nestedInApp = false, QList<QGraphicsItem *> *itemsList = NULL,
                         bool editOnStart = false, Application *app = NULL,BuilderItem * parent = 0);
     ~DestinationPortItem();
     QRectF boundingRect() const;
@@ -33,7 +33,6 @@ private:
     Application *app;
     BuilderItem *parent;
     bool portAvailable;
-    bool isInApp;
     QGraphicsProxyWidget *lineEditWidget;
     QList<QGraphicsItem *> *itemsList;
 

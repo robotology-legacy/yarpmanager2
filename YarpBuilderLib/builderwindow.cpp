@@ -89,17 +89,18 @@ void BuilderWindow::init()
 
 }
 
-void BuilderWindow::save()
+bool BuilderWindow::save()
 {
     if(!editingMode){
-        return;
+        return true;
     }
     Application* application = manager.getKnowledgeBase()->getApplication();
     if(!application)
-        return;
+        return true;
 
     m_modified = !manager.saveApplication(application->getName());
     modified(m_modified);
+    return !m_modified;
 }
 
 QString BuilderWindow::getFileName()
@@ -147,8 +148,8 @@ void BuilderWindow::prepareManagerFrom(Manager* lazy,
 BuilderWindow::~BuilderWindow()
 {
     //delete ui;
-    for(int i=0;i<itemsList.count();i++){
-        BuilderItem *it =((BuilderItem*)itemsList.at(i));
+    for(int i=0;i<scene->items().count();i++){
+        BuilderItem *it =((BuilderItem*)scene->items().at(i));
         if(it->type() == QGraphicsItem::UserType + (int)ModuleItemType){
             disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
             disconnect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
@@ -214,16 +215,16 @@ void BuilderWindow::addConnectionsAction(QAction *act)
 
 void BuilderWindow::setModuleRunning(bool running, int id)
 {
-    for(int i=0;i<itemsList.count();i++){
-        if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ModuleItemType)){
-            ModuleItem *m = (ModuleItem *)itemsList.at(i);
+    for(int i=0;i<scene->items().count();i++){
+        if(scene->items().at(i)->type() == (QGraphicsItem::UserType + ModuleItemType)){
+            ModuleItem *m = (ModuleItem *)scene->items().at(i);
             if(m->getId() == id){
                 m->setRunning(running);
                 break;
             }
         }
-        if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
-            ApplicationItem *a = (ApplicationItem *)itemsList.at(i);
+        if(scene->items().at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
+            ApplicationItem *a = (ApplicationItem *)scene->items().at(i);
             a->setModuleRunning(running,id);
         }
     }
@@ -231,16 +232,16 @@ void BuilderWindow::setModuleRunning(bool running, int id)
 
 void BuilderWindow::setConnectionConnected(bool connected, QString from, QString to)
 {
-    for(int i=0;i<itemsList.count();i++){
-        if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ConnectionItemType)){
-            Arrow *m = (Arrow *)itemsList.at(i);
+    for(int i=0;i<scene->items().count();i++){
+        if(scene->items().at(i)->type() == (QGraphicsItem::UserType + ConnectionItemType)){
+            Arrow *m = (Arrow *)scene->items().at(i);
             if(m->getFrom() == from && m->getTo() == to){
                 m->setConnected(connected);
                 break;
             }
         }
-        if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
-            ApplicationItem *a = (ApplicationItem *)itemsList.at(i);
+        if(scene->items().at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
+            ApplicationItem *a = (ApplicationItem *)scene->items().at(i);
             a->setConnectionConnected(connected,from,to);
         }
     }
@@ -250,8 +251,8 @@ void BuilderWindow::setConnectionConnected(bool connected, QString from, QString
 
 bool BuilderWindow::isApplicationPresent(Application *application)
 {
-    for(int i=0;i<itemsList.count();i++){
-        BuilderItem *it = (BuilderItem*)itemsList.at(i);
+    for(int i=0;i<scene->items().count();i++){
+        BuilderItem *it = (BuilderItem*)scene->items().at(i);
         if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
             ApplicationItem *appItem = (ApplicationItem*)it;
             if(appItem->getInnerApplication() == application){
@@ -264,8 +265,8 @@ bool BuilderWindow::isApplicationPresent(Application *application)
 
 bool BuilderWindow::isModulePresent(Module *module)
 {
-    for(int i=0;i<itemsList.count();i++){
-        BuilderItem *it = (BuilderItem*)itemsList.at(i);
+    for(int i=0;i<scene->items().count();i++){
+        BuilderItem *it = (BuilderItem*)scene->items().at(i);
         if(it->type() == QGraphicsItem::UserType + ModuleItemType){
             ModuleItem *appItem = (ModuleItem*)it;
             if(appItem->getInnerModule() == module){
@@ -292,7 +293,9 @@ void BuilderWindow::load(bool refresh)
         Application* mainApplication;
         CnnContainer connections;
         ApplicaitonPContainer applications;
+        ModulePContainer modules;
         ExecutablePContainer exes;
+
 
         if(!editingMode){
             mainApplication = safeManager->getKnowledgeBase()->getApplication();
@@ -303,13 +306,14 @@ void BuilderWindow::load(bool refresh)
             mainApplication = manager.getKnowledgeBase()->getApplication();
             connections = manager.getKnowledgeBase()->getConnections(mainApplication);
             applications = manager.getKnowledgeBase()->getApplications(mainApplication);
-            exes = manager.getExecutables();
+            modules = manager.getKnowledgeBase()->getModules(mainApplication);
         }
 
         //ModulePContainer modules = safeManager->getKnowledgeBase()->getModules(mainApplication);
 
         /*************************************/
-        ExecutablePIterator moditr;
+        ExecutablePIterator exeitr;
+        ModulePIterator moditr;
         /*************************************/
 
 
@@ -322,21 +326,31 @@ void BuilderWindow::load(bool refresh)
         }
 
 
-        for(moditr=exes.begin(); moditr<exes.end(); moditr++){
-            Module* module = (*moditr)->getModule();
-            QString id = QString("%1").arg((*moditr)->getID());
-            bool idFound = false;
-            foreach (int usedId, usedModulesId) {
-                if(usedId == id.toInt()){
-                    idFound = true;
-                    break;
+        if(!editingMode){
+            for(exeitr=exes.begin(); exeitr<exes.end(); exeitr++){
+                Module* module = (*exeitr)->getModule();
+
+                QString id = QString("%1").arg((*exeitr)->getID());
+                bool idFound = false;
+                foreach (int usedId, usedModulesId) {
+                    if(usedId == id.toInt()){
+                        idFound = true;
+                        break;
+                    }
                 }
+                if(!idFound){
+                    usedModulesId.append(id.toInt());
+                    addModule(module,id.toInt());
+                }
+
             }
-            if(!idFound){
-                usedModulesId.append(id.toInt());
-                addModule(module,id.toInt());
+        }else{
+            for(moditr=modules.begin(); moditr<modules.end(); moditr++){
+                Module* module = (Module*)(*moditr);
+                addModule(module,-1);
             }
         }
+
 
 
         index = (index/900)*100+50;
@@ -365,9 +379,9 @@ void BuilderWindow::load(bool refresh)
             }else{
                 bool bExist = false;
                 SourcePortItem *sourcePort = NULL;
-                for(int i=0;i<itemsList.count() && !bExist;i++){
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + SourcePortItemType)){
-                        SourcePortItem *auxSourceport = (SourcePortItem*)itemsList.at(i);
+                for(int i=0;i<scene->items().count() && !bExist;i++){
+                    if(scene->items().at(i)->type() == (QGraphicsItem::UserType + SourcePortItemType)){
+                        SourcePortItem *auxSourceport = (SourcePortItem*)scene->items().at(i);
                         if(auxSourceport->getItemName() == baseCon.from()){
                             source = auxSourceport;
                             bExist = true;
@@ -375,7 +389,7 @@ void BuilderWindow::load(bool refresh)
                         }
 
                     }
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
+                    if(scene->items().at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
                         // TODO
                         qDebug() << "APPLICATION CONN";
                     }
@@ -399,16 +413,16 @@ void BuilderWindow::load(bool refresh)
                 dest = findModelFromInput(input,inModulePrefix);
             }else{
                 bool bExist = false;
-                for(int i=0;i<itemsList.count() && !bExist;i++){
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + DestinationPortItemType)){
-                        DestinationPortItem *auxDestPort = (DestinationPortItem*)itemsList.at(i);
+                for(int i=0;i<scene->items().count() && !bExist;i++){
+                    if(scene->items().at(i)->type() == (QGraphicsItem::UserType + DestinationPortItemType)){
+                        DestinationPortItem *auxDestPort = (DestinationPortItem*)scene->items().at(i);
                         if(auxDestPort->getItemName() == baseCon.to()){
                             dest = auxDestPort;
                             bExist = true;
                             break;
                         }
                     }
-                    if(itemsList.at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
+                    if(scene->items().at(i)->type() == (QGraphicsItem::UserType + ApplicationItemType)){
                         // TODO
                         qDebug() << "APPLICATION CONN";
                     }
@@ -435,16 +449,19 @@ void BuilderWindow::load(bool refresh)
                 // TODO
             }else{
                 if(source && dest){
-                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager,false,editingMode);
-                    arrow->setActions(connectionsAction);
-                    connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
-                    arrow->setColor(QColor(Qt::red));
-                    source->addArrow(arrow);
-                    dest->addArrow(arrow);
-                    scene->addItem(arrow);
-                    arrow->setZValue(1);
-                    arrow->updatePosition();
-                    itemsList.append(arrow);
+                    Arrow *arrow =(Arrow*)addConnection(source,dest,id);
+                    arrow->setConnection(baseCon);
+
+//                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager,false,editingMode);
+//                    arrow->setActions(connectionsAction);
+//                    connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+//                    arrow->setColor(QColor(Qt::red));
+//                    source->addArrow(arrow);
+//                    dest->addArrow(arrow);
+//                    scene->addItem(arrow);
+//                    arrow->setZValue(1);
+//                    arrow->updatePosition();
+                    //itemsList.append(arrow);
                 }
             }
             id++;
@@ -479,44 +496,135 @@ BuilderItem *BuilderWindow::onAddDestinationPort(QString name,QPointF pos)
 
 BuilderItem *BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
 {
-    Arrow *arrow = new Arrow((BuilderItem*)startItem, (BuilderItem*)endItem, &manager,false,editingMode);
-    arrow->setActions(connectionsAction);
-    connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
-    arrow->setColor(QColor(Qt::red));
-    ((BuilderItem*)startItem)->addArrow(arrow);
-    ((BuilderItem*)endItem)->addArrow(arrow);
-    scene->addItem(arrow);
-    arrow->setZValue(-1000.0);
-    arrow->updatePosition();
-    itemsList.append(arrow);
+    Application* mainApplication = NULL;
+    mainApplication = manager.getKnowledgeBase()->getApplication();
+    Connection connection;
+    BuilderItem *myStartItem = (BuilderItem*)startItem;
+    BuilderItem *myEndItem = (BuilderItem*)endItem;
+    GyPoint p,p1,fakeLblPoint;
+    QString label;
+    setToolTip(QString("%1 --> %2").arg(myStartItem->getItemName()).arg(myEndItem->getItemName()));
+
+    bool bExternTo = false;
+    bool bExternFrom = false;
+
+    InputData* input = NULL;
+    OutputData* output = NULL;
+
+    string strFrom,strTo ;
+
+    // Source
+    if(myStartItem->type() == (QGraphicsItem::UserType + (int)ModulePortItemType)){
+        PortItem *port = ((PortItem*)myStartItem);
+        ModuleItem *module = (ModuleItem *)port->parentItem();
+        int portType = port->getPortType();
+        if(portType == OUTPUT_PORT){
+            output = port->getOutputData();
+            strFrom = string(module->getInnerModule()->getPrefix()) + string(port->getOutputData()->getPort());
+            label = QString("%1").arg(port->getOutputData()->getCarrier());
+
+            if(((ModuleItem*)port->parentItem())->getInnerModule()->owner() != mainApplication){
+                bExternFrom = true;
+            }
+        }
+
+    }else if(myStartItem->type() == (QGraphicsItem::UserType + (int)SourcePortItemType)){
+        strFrom = string(myStartItem->getItemName().toLatin1().data());
+        bExternFrom = true;
+    }
+
+    // Destination
+    if(myEndItem->type() == (QGraphicsItem::UserType + (int)ModulePortItemType)){
+        PortItem *port = ((PortItem*)myEndItem);
+        ModuleItem *module = (ModuleItem *)port->parentItem();
+        int portType = port->getPortType();
+        if(portType == INPUT_PORT){
+            input = port->getInputData();
+            strTo = string(module->getInnerModule()->getPrefix()) + string(port->getInputData()->getPort());
+            label = QString("%1").arg(port->getInputData()->getCarrier());
+
+            if(((ModuleItem*)port->parentItem())->getInnerModule()->owner() != mainApplication){
+                bExternTo = true;
+            }
+        }
+
+    }else if(myEndItem->type() == (QGraphicsItem::UserType + (int)DestinationPortItemType)){
+        strTo = string(myEndItem->getItemName().toLatin1().data());
+        bExternTo = true;
+
+    }
+
+
+
+    if(label.isEmpty()){
+        label = "udp";
+    }
+
+    Arrow *arrow = (Arrow*)addConnection((BuilderItem*)startItem, (BuilderItem*)endItem,-1);
+
+    connection.setFrom(strFrom.c_str());
+    connection.setTo(strTo.c_str());
+    connection.setCarrier(label.toLatin1().data());
+    connection.setFromExternal(bExternFrom);
+    connection.setToExternal(bExternTo);
+    connection.setCorOutputData(output);
+    connection.setCorInputData(input);
+
+
+    fakeLblPoint.x = -1;
+    fakeLblPoint.y = -1;
+    p.x = (myStartItem->pos()).x();
+    p.y = (myStartItem->pos()).y();
+    p1.x = (myEndItem->pos()).x();
+    p1.y = (myEndItem->pos()).y();
+    arrow->getModel()->points.clear();
+    arrow->getModel()->points.push_back(fakeLblPoint);
+    arrow->getModel()->points.push_back(p);
+    arrow->getModel()->points.push_back(p1);
+    connection.setModel(arrow->getModel());
+    connection.setModelBase(*arrow->getModel());
+    connection = manager.getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
+
+    arrow->setConnection(connection);
+    //arrow->updateModel(p,p1,fakeLblPoint);
+//    Arrow *arrow = new Arrow((BuilderItem*)startItem, (BuilderItem*)endItem, &manager,false,editingMode);
+//    arrow->setActions(connectionsAction);
+//    connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+//    arrow->setColor(QColor(Qt::red));
+//    ((BuilderItem*)startItem)->addArrow(arrow);
+//    ((BuilderItem*)endItem)->addArrow(arrow);
+//    scene->addItem(arrow);
+//    arrow->setZValue(-1000.0);
+//    arrow->updatePosition();
+//    scene->items().append(arrow);
 
     m_modified = true;
     modified(true);
     return arrow;
 
-//    Application* mainApplication = manager.getKnowledgeBase()->getApplication();
-
-//    manager.getKnowledgeBase()->removeApplication(mainApplication);
-//    manager.getKnowledgeBase()->addApplication(mainApplication);
-
-//    itemsList.clear();
-//    scene->clear();
-
-
-//    refreshApplication();
-
 
 }
 
-//BuilderItem * BuilderWindow::addModule(QString itemName, QStringList inputPorts, QStringList outputPorts,QPointF pos, BuilderItem *parent)
-//{
-//    BuilderItem *it = new ModuleItem(itemName,inputPorts,outputPorts);
-//    scene->addItem(it);
-//    it->setPos(pos);
-//    connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-//    connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
-//    return it;
-//}
+
+
+BuilderItem * BuilderWindow::addConnection(void *startItem ,void *endItem, int connectionId)
+{
+   Arrow *arrow = new Arrow((BuilderItem*)startItem,(BuilderItem*)endItem,connectionId,!editingMode ? safeManager : &manager,false,editingMode);
+   arrow->setActions(connectionsAction);
+   connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+   connect(arrow->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+   arrow->setColor(QColor(Qt::red));
+   ((BuilderItem*)startItem)->addArrow(arrow);
+   ((BuilderItem*)endItem)->addArrow(arrow);
+   scene->addItem(arrow);
+   arrow->setZValue(-1000.0);
+   arrow->updatePosition();
+   scene->items().append(arrow);
+
+
+
+   return arrow;
+}
 
 BuilderItem * BuilderWindow::addDestinantionPort(QString name, bool editOnStart)
 {
@@ -526,10 +634,10 @@ BuilderItem * BuilderWindow::addDestinantionPort(QString name, bool editOnStart)
     }else{
         mainApplication = manager.getKnowledgeBase()->getApplication();
     }
-    DestinationPortItem *destPort = new DestinationPortItem(name,false,&itemsList,editOnStart,mainApplication);
+    DestinationPortItem *destPort = new DestinationPortItem(name,false,&scene->items(),editOnStart,mainApplication);
     connect(destPort->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
     connect(destPort->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
-    itemsList.append(destPort);
+    //itemsList.append(destPort);
 
     scene->addItem(destPort);
     return destPort;
@@ -549,11 +657,11 @@ BuilderItem * BuilderWindow::addSourcePort(QString name, bool editOnStart)
     }else{
         mainApplication = manager.getKnowledgeBase()->getApplication();
     }
-    SourcePortItem *sourcePort = new SourcePortItem(name,false,&itemsList,editOnStart,mainApplication);
+    SourcePortItem *sourcePort = new SourcePortItem(name,false,&scene->items(),editOnStart,mainApplication);
     connect(sourcePort->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     connect(sourcePort->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
 
-    itemsList.append(sourcePort);
+    //itemsList.append(sourcePort);
     scene->addItem(sourcePort);
     return sourcePort;
 }
@@ -566,7 +674,7 @@ BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
     connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
-    itemsList.append(it);
+    //itemsList.append(it);
     scene->addItem(it);
     it->setZValue(2);
     if(module->getModelBase().points.size()>0){
@@ -584,6 +692,7 @@ ApplicationItem* BuilderWindow::addApplication(Application *application)
 {
 
     ApplicationItem *appItem = new ApplicationItem(application,!editingMode ? safeManager : &manager,&usedModulesId, false,editingMode);
+
     connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
     connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
     connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
@@ -599,7 +708,7 @@ ApplicationItem* BuilderWindow::addApplication(Application *application)
                         (index/900)*100+10);
         index += 300;
     }
-    itemsList.append(appItem);
+    //itemsList.append(appItem);
     return appItem;
 
 }
@@ -610,8 +719,7 @@ void BuilderWindow::onAddedApplication(void *app,QPointF pos)
         return;
     }
 
-    const char *name = (const char*)((Application*)app)->getName();
-    ApplicationInterface iapp(name);
+    ApplicationInterface iapp((const char*)((Application*)app)->getName());
     GraphicModel modBase;
     GyPoint p;
     p.x = pos.x();
@@ -623,9 +731,11 @@ void BuilderWindow::onAddedApplication(void *app,QPointF pos)
     if(!mainApplication)
         return;
 
-    const char* uniqueAppId = manager.getKnowledgeBase()->getUniqueAppID(mainApplication, name);
-    QString strPrefix = QString("/%1").arg(uniqueAppId);
-    iapp.setPrefix(strPrefix.toLatin1().data());
+    string strPrefix = "/";
+    const char *uniqeId = manager.getKnowledgeBase()->getUniqueAppID(mainApplication, iapp.getName());
+    qDebug() << "manager.getKnowledgeBase()->getUniqueAppID " << uniqeId;
+    strPrefix += string(uniqeId);
+    iapp.setPrefix(strPrefix.c_str());
     Application* application  = manager.getKnowledgeBase()->addIApplicationToApplication(mainApplication, iapp);
     if(application){
         addApplication(application);
@@ -692,7 +802,7 @@ void BuilderWindow::setSelectedConnections(QList<int>selectedIds)
     if(editingMode){
         return;
     }
-    foreach (QGraphicsItem *it, itemsList) {
+    foreach (QGraphicsItem *it, scene->items()) {
         if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
             Arrow *arrow = (Arrow*)it;
             if(selectedIds.contains(arrow->getId())){
@@ -713,7 +823,7 @@ void BuilderWindow::setSelectedModules(QList<int>selectedIds)
     if(editingMode){
         return;
     }
-    foreach (QGraphicsItem *it, itemsList) {
+    foreach (QGraphicsItem *it, scene->items()) {
         if(it->type() == QGraphicsItem::UserType + ModuleItemType){
             ModuleItem *mod = (ModuleItem*)it;
             if(selectedIds.contains(mod->getId())){
@@ -970,9 +1080,9 @@ void BuilderWindow::findInputOutputData(Connection& cnn,  ModulePContainer &modu
 
 PortItem* BuilderWindow::findModelFromOutput(OutputData* output,QString modulePrefix)
 {
-    for(int i=0; i<itemsList.count(); i++)
+    for(int i=0; i<scene->items().count(); i++)
     {
-        QGraphicsItem *it = itemsList.at(i);
+        QGraphicsItem *it = scene->items().at(i);
         if(it->type() == (QGraphicsItem::UserType + (int)ApplicationItemType)){
             ApplicationItem *application = (ApplicationItem*)it;
             for(int j=0; j<application->getModulesList()->count(); j++){
@@ -1010,9 +1120,9 @@ PortItem* BuilderWindow::findModelFromOutput(OutputData* output,QString modulePr
 
 PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePrefix)
 {
-    for(int i=0; i<itemsList.count(); i++)
+    for(int i=0; i<scene->items().count(); i++)
     {
-        QGraphicsItem *it = itemsList.at(i);
+        QGraphicsItem *it = scene->items().at(i);
 
         if(it->type() == (QGraphicsItem::UserType + (int)ApplicationItemType)){
             ApplicationItem *application = (ApplicationItem*)it;
@@ -1054,7 +1164,7 @@ PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePref
 
 void BuilderWindow::setOutputPortAvailable(QString oData, bool available)
 {
-    foreach (QGraphicsItem *it, itemsList) {
+    foreach (QGraphicsItem *it, scene->items()) {
         BuilderItem *item = (BuilderItem *)it;
         if(item->type() == QGraphicsItem::UserType + ModuleItemType){
             ModuleItem *mod = (ModuleItem*)item;
@@ -1089,7 +1199,7 @@ void BuilderWindow::setInputPortAvailable(QString iData, bool available)
 {
 
 
-    foreach (QGraphicsItem *it, itemsList) {
+    foreach (QGraphicsItem *it, scene->items()) {
         BuilderItem *item = (BuilderItem *)it;
         if(item->type() == QGraphicsItem::UserType + ModuleItemType){
             ModuleItem *mod = (ModuleItem*)item;
@@ -1327,19 +1437,20 @@ void CustomView::deleteAllItems(){
     QList <QGraphicsItem*>selectedItems;
 
 
+    qDebug() << "Left Items in scene " << items().count();
     foreach (QGraphicsItem* item, items()) {
         if(item->type() != QGraphicsItem::UserType + (int)ModulePortItemType &&
                 item->type() != QGraphicsItem::UserType + (int)ArrowLabelItemType &&
+                item->type() != QGraphicsItem::UserType + (int)HandleItemType &&
                 item->parentItem() == NULL){
             selectedItems.append(item);
         }
     }
-
     foreach (QGraphicsItem* item, selectedItems) {
 
         if(item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
             if(selectedItems.removeOne(item)){
-                builder->itemsList.removeOne(item);
+                //builder->itemsList.removeOne(item);
                 delete item;
             }
         }
@@ -1352,11 +1463,10 @@ void CustomView::deleteAllItems(){
            item->type() == QGraphicsItem::UserType + (int)DestinationPortItemType ||
            item->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
             if(selectedItems.removeOne(item)){
-                builder->itemsList.removeOne(item);
+                //builder->itemsList.removeOne(item);
                 delete item;
             }
         }
-
     }
     modified();
 }
@@ -1368,35 +1478,41 @@ void CustomView::deleteSelectedItems(QGraphicsItem *it){
     bool deleteOnlyHandle = false;
     if(it && it->type() == QGraphicsItem::UserType + (int)HandleItemType){
         deleteOnlyHandle  = true;
+        Arrow *arrow = (Arrow*)it->parentItem();
+        arrow->removeHandle((LineHandle*)it);
+        delete it;
+        return;
     }
 
     foreach (QGraphicsItem* item, items()) {
         if(item->isSelected() &&
                 item->type() != QGraphicsItem::UserType + (int)ModulePortItemType &&
                 item->type() != QGraphicsItem::UserType + (int)ArrowLabelItemType &&
+                item->type() != QGraphicsItem::UserType + (int)HandleItemType &&
                 item->parentItem() == NULL){
             selectedItems.append(item);
         }
     }
 
-    foreach (QGraphicsItem* item, selectedItems) {
-        if(item->type() == QGraphicsItem::UserType + (int)HandleItemType){
-            selectedItems.removeOne(item);
-            builder->itemsList.removeOne(item);
-            delete item;
-        }
+//    foreach (QGraphicsItem* item, selectedItems) {
+//        if(item->type() == QGraphicsItem::UserType + (int)HandleItemType){
+//            selectedItems.removeOne(item);
+//            //builder->itemsList.removeOne(item);
+//            delete item;
+//        }
 
-    }
+//    }
 
-    if(deleteOnlyHandle){
-        return;
-    }
+//    if(deleteOnlyHandle){
+//        return;
+//    }
 
     foreach (QGraphicsItem* item, selectedItems) {
 
         if(item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
             if(selectedItems.removeOne(item)){
-                builder->itemsList.removeOne(item);
+                //builder->itemsList.removeOne(item);
+               // scene()->removeItem(item);
                 delete item;
             }
         }
@@ -1409,7 +1525,8 @@ void CustomView::deleteSelectedItems(QGraphicsItem *it){
            item->type() == QGraphicsItem::UserType + (int)DestinationPortItemType ||
            item->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
             if(selectedItems.removeOne(item)){
-                builder->itemsList.removeOne(item);
+                //builder->itemsList.removeOne(item);
+                //scene()->removeItem(item);
                 delete item;
             }
 

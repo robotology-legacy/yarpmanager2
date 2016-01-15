@@ -32,6 +32,7 @@ public:
 
     BuilderItem(QGraphicsObject * parent = 0): QGraphicsObject(parent){
         snap = false;
+        offset = QPointF(0,0);
     }
     virtual QRectF boundingRect() const = 0;
     virtual QPointF connectionPoint() = 0;
@@ -52,6 +53,7 @@ public:
     QPointF computeTopLeftGridPoint(const QPointF &pointP);
     QList<QAction*> getActions();
     void setActions(QList<QAction*>);
+    bool isNestedInApp();
 
 
 protected:
@@ -70,6 +72,7 @@ protected:
     bool allowInputs;
     bool allowOutputs;
     bool snap;
+    bool nestedInApp;
 
     ItemSignalHandler *sigHandler;
     QList<Arrow *> arrows;

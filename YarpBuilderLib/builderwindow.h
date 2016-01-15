@@ -42,7 +42,7 @@ public:
 
 
     void load(bool refresh = false);
-    void save();
+    bool save();
 
     void setSelectedModules(QList<int>selectedIds);
     void setSelectedConnections(QList<int>selectedIds);
@@ -50,7 +50,8 @@ public:
     //BuilderItem* addModule(QString itemName, QStringList inputPorts, QStringList outputPorts , QPointF pos, BuilderItem * parent = 0);
     BuilderItem *addModule(Module *module, int moduleId);
     BuilderItem *addSourcePort(QString name, bool editOnStart = false);
-    BuilderItem * addDestinantionPort(QString name, bool editOnStart = false);
+    BuilderItem *addDestinantionPort(QString name, bool editOnStart = false);
+    BuilderItem *addConnection(void *startItem , void *endItem, int connectionId);
     ApplicationItem* addApplication(Application *app);
     void setOutputPortAvailable(QString, bool);
     void setInputPortAvailable(QString, bool);
@@ -94,7 +95,7 @@ protected:
     SafeManager *safeManager;
     Application *app;
     int index;
-    QList <QGraphicsItem*> itemsList;
+    //QList <QGraphicsItem*> itemsList;
     bool editingMode;
     bool m_modified;
 
