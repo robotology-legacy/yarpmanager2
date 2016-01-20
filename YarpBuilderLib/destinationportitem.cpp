@@ -6,7 +6,7 @@
 #include <QLineEdit>
 
 
-DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<QGraphicsItem *> *itemsList,
+DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp,
                                          bool editOnStart, Application *app, BuilderItem *parent) : BuilderItem(parent)
 {
     itemType = DestinationPortItemType;
@@ -16,7 +16,6 @@ DestinationPortItem::DestinationPortItem(QString itemName, bool isInApp, QList<Q
     pressed = false;
     moved = false;
     this->nestedInApp = isInApp;
-    this->itemsList = itemsList;
     this->parent = parent;
     this->app = app;
 
@@ -121,18 +120,17 @@ void DestinationPortItem::editingFinished()
 {
     QString text = ((QLineEdit*)lineEditWidget->widget())->text();
 
-    if(itemsList){
-        for (int i=0;i<itemsList->count();i++){
-            QGraphicsItem *it = itemsList->at(i);
-            if(((BuilderItem*)it)->type() == QGraphicsItem::UserType + DestinationPortItemType && it != this){
-                if(((DestinationPortItem*)it)->getItemName() == text){
-                    ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,0,0);");
-                    allowOutputs = false;
-                    return;
-                }
+    for (int i=0;i<scene()->items().count();i++){
+        QGraphicsItem *it = scene()->items().at(i);
+        if(((BuilderItem*)it)->type() == QGraphicsItem::UserType + DestinationPortItemType && it != this){
+            if(((DestinationPortItem*)it)->getItemName() == text){
+                ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,0,0);");
+                allowOutputs = false;
+                return;
             }
         }
     }
+
     allowOutputs = true;
 
     ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,255,255);");

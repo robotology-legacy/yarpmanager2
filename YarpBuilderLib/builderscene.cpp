@@ -43,6 +43,11 @@ void BuilderScene::dropEvent(QGraphicsSceneDragDropEvent *event)
     qlonglong pointer = event->mimeData()->data("pointer").toLongLong();
     QString itemType = event->mimeData()->text();
 
+    // Unselect all
+    foreach (QGraphicsItem *it, selectedItems()) {
+        it->setSelected(false);
+    }
+
     if(itemType == "module" ){
         Module *mod = (yarp::manager::Module*)pointer;
         addedModule((void*)mod,event->scenePos());
@@ -51,28 +56,7 @@ void BuilderScene::dropEvent(QGraphicsSceneDragDropEvent *event)
         Application *app = (yarp::manager::Application*)pointer;
         addedApplication((void*)app,event->scenePos());
     }
-//    int type = sType.toInt();
-//    BuilderItem *it = NULL;
 
-//    switch (type) {
-//    case 1:
-//        //it = new ModuleItem("Modulo",QStringList() << "input1" << "input2" ,QStringList() << "output1");
-//        break;
-//    case 2:
-//        it = new SourcePortItem("SourcePort");
-//        break;
-//    case 3:
-//        it = new DestinationPortItem("DestinationPort");
-//        break;
-//    default:
-//        break;
-//    }
-
-//    it->snapToGrid(snap);
-
-//    addItem(it);
-//    it->setPos(event->scenePos());
-//    connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),this,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
 }
 
 void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)

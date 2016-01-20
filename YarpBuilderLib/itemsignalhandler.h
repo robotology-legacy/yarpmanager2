@@ -33,6 +33,7 @@ signals:
 public slots:
     void onConnectionSelected(QGraphicsItem *it);
     void onModuleSelected(QGraphicsItem *it);
+    void onApplicationSelected(QGraphicsItem *it);
     void onConnectionComboChanged(QString);
     void onEditingFinished();
 

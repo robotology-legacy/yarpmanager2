@@ -33,6 +33,7 @@ public:
     BuilderItem(QGraphicsObject * parent = 0): QGraphicsObject(parent){
         snap = false;
         offset = QPointF(0,0);
+        nestedInApp = false;
     }
     virtual QRectF boundingRect() const = 0;
     virtual QPointF connectionPoint() = 0;

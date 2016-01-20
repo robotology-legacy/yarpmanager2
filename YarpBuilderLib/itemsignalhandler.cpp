@@ -34,6 +34,12 @@ void ItemSignalHandler::onModuleSelected(QGraphicsItem *it)
     moduleSelected(it);
 }
 
+void ItemSignalHandler::onApplicationSelected(QGraphicsItem *it)
+{
+    applicationSelected(it);
+}
+
+
 void ItemSignalHandler::onConnectionComboChanged(QString text)
 {
     if(parentItem && type == ArrowLabelItemType){

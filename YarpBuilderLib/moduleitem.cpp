@@ -251,6 +251,7 @@ void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     painter->setPen(QPen(QBrush(QColor(Qt::black)),1));
     painter->drawText(mainRect,Qt::AlignCenter,itemName);
 
+
 }
 
 

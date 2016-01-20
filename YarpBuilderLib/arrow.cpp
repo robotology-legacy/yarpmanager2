@@ -53,35 +53,7 @@
 
 const qreal Pi = 3.14;
 
-//Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager,
-//             bool isInApp,bool editingMode,BuilderItem *parent)
-//    : BuilderItem(parent)
-//{
-//    itemType = ConnectionItemType;
-//    sigHandler = new ItemSignalHandler();
-//    myStartItem = startItem;
-//    myEndItem = endItem;
-//    connected = false;
-//    this->manager = safeManager;
-//    setFlags(QGraphicsItem::ItemIsSelectable | QGraphicsItem::ItemClipsToShape);
-//    setFlag(ItemSendsGeometryChanges,true);
-//    setFlag(ItemIsMovable,true);
-//    //setFlag(QGraphicsItem::ItemIsMovable, true);
-//    myColor = Qt::black;
-//    this->textLbl = NULL;
-//    this->isInApp = isInApp;
-//    this->editingMode = editingMode;
-//    firstTime = true;
-//    //Application* mainApplication = safeManager->getKnowledgeBase()->getApplication();
-//    externalSelection = false;
-//    //updateConnection(true);
-//   //connection = safeManager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
 
-//    textLbl = new Label(connection.carrier(),this);
-//    textLbl->show();
-//    qDebug() << textLbl->type();
-
-//}
 
 Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem,int id, Manager *safeManager,
              bool isInApp,bool editingMode, BuilderItem *parent)
@@ -95,7 +67,7 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem,int id, Manager *safeM
     this->manager = safeManager;
     setFlags(QGraphicsItem::ItemIsSelectable | QGraphicsItem::ItemClipsToShape);
     setFlag(ItemSendsGeometryChanges,true);
-    setFlag(ItemIsMovable,true);
+    //setFlag(ItemIsMovable,true);
     //setFlag(QGraphicsItem::ItemIsMovable, true);
     myColor = Qt::black;
     //this->textLbl = NULL;
@@ -110,7 +82,14 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem,int id, Manager *safeM
 
     setToolTip(QString("%1 --> %2").arg(myStartItem->itemName).arg(myEndItem->itemName));
 
+    textLbl.setFlag(ItemIsMovable,!nestedInApp);
+    textLbl.setFlag(ItemSendsGeometryChanges,!nestedInApp);
 
+
+
+//    if(parentItem() == NULL){
+//        scene()->addItem(&textLbl);
+//    }
 
 
 
@@ -130,7 +109,7 @@ Arrow::~Arrow()
 //    }
 
     handleList.clear();
-//    if(textLbl){
+//    if(textLbl && !textLbl.parentItem()){
 //        //scene()->removeItem(textLbl);
 //        delete textLbl;
 //    }
@@ -154,7 +133,6 @@ void Arrow::setConnection(Connection conn)
     QString label = conn.carrier();
     if(!label.isEmpty()){
         textLbl.setText(label);
-        //scene()->addItem(&textLbl);
     }
     QFontMetrics fontMetric(font);
     textWidth = fontMetric.width(label);
@@ -168,14 +146,21 @@ void Arrow::setConnection(Connection conn)
         }
         if(mod.points.size() > 3){
             // Handles
+            startP = mapFromItem(myStartItem,myStartItem->connectionPoint());
+            endP = mapFromItem(myEndItem,myEndItem->connectionPoint());
+            polyline.clear();
+            polyline.prepend(startP);
+
             for(int i=2; i<mod.points.size() - 1;i++){
                 GyPoint p = mod.points[i];
                 QPointF point(p.x,p.y);
                 LineHandle *handle = new LineHandle(point,this);
                 handleList.append(handle);
+                polyline.append(point);
                 qDebug() << "APPENDING " << handle;
             }
-
+            polyline.append(endP);
+            boundingPolyline = polyline;
         }
     }
 
@@ -213,8 +198,9 @@ void Arrow::updateModel()
         labelPoint.x = -1;
         labelPoint.y = -1;
     }else{
-        labelPoint.x = textLbl.pos().x();
-        labelPoint.y = textLbl.pos().y();
+        QPointF p = textLbl.pos();
+        labelPoint.x = p.x();
+        labelPoint.y = p.y();
     }
     startPoint.x = (myStartItem->pos()).x();
     startPoint.y = (myStartItem->pos()).y();
@@ -285,9 +271,11 @@ QRectF Arrow::boundingRect() const
 {
     qreal extra = (/*pen().width()*/2 + 30) / 2.0;
 
-    return QRectF(boundingPolyline.boundingRect())
-        .normalized()
-        .adjusted(-extra, -extra, extra, extra);
+    QRectF bRect =  QRectF(boundingPolyline.boundingRect())
+            .normalized()
+            .adjusted(-extra, -extra, extra, extra);
+
+    return bRect.united(textLbl.boundingRect());
 }
 
 QPainterPath Arrow::shape() const
@@ -311,35 +299,38 @@ QPainterPath Arrow::shape() const
 void Arrow::updatePosition()
 {
 
+    QGraphicsItem *parent = parentItem();
+
     if(boundingPolyline.isEmpty()){
         boundingPolyline.prepend(mapFromItem(myStartItem,myStartItem->connectionPoint()));
         boundingPolyline.append( mapFromItem(myEndItem,myEndItem->connectionPoint()));
     }
 
-    update();
+    hide();
+    show();
+
 }
 
 void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
           QWidget *)
 {
-    if (myStartItem->collidesWithItem(myEndItem))
-        return;
+//    if (myStartItem->collidesWithItem(myEndItem))
+//        return;
 
     painter->setClipRect( option->exposedRect );
 
     qreal arrowSize = 10;
 
-
+    /************** Polyline *********************/
     startP = mapFromItem(myStartItem,myStartItem->connectionPoint());
     endP = mapFromItem(myEndItem,myEndItem->connectionPoint());
     polyline.clear();
-
 
     polyline.prepend(startP);
     foreach (LineHandle *handle, handleList) {
         QPointF handlePoint = handle->handlePoint();
         polyline.append(handlePoint);
-        if(isSelected()){
+        if(isSelected() && !isNestedInApp()){
             handle->show();
         }else{
             handle->hide();
@@ -347,6 +338,7 @@ void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
     }
     polyline.append(endP);
     boundingPolyline = polyline;
+    /************** Polyline *********************/
 
 
     QLineF lastLine(polyline.at(polyline.count()-2),
@@ -391,11 +383,12 @@ void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
     if(!textLbl.hasBeenMoved()){
         QPointF centerP = QPointF((p1.x() + p2.x())/2 - textWidth/2,((p1.y() + p2.y())/2) - 5);
         //scene()->addItem(this->textLbl);
-        //textLbl->setPos(0,0);
+        //textLbl.setPos(0,0);
         textLbl.setPos(centerP);
 
 
     }
+
 
 
 }
@@ -507,7 +500,7 @@ QPointF LineHandle::computeTopLeftGridPoint(const QPointF &pointP){
 
 QPointF LineHandle::handlePoint()
 {
-    return QPointF(x(),y());
+    return pos();
 }
 
 void LineHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -515,7 +508,7 @@ void LineHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
     pressed = true;
     QPainterPath newPath;
 
-    newPath.addRect(scenePos().x() + rect().x() - 2,scenePos().y() + rect().y() - 2 ,rect().width() + 4,rect().height()+4);
+    newPath.addRect(pos().x() + rect().x() - 2,pos().y() + rect().y() - 2 ,rect().width() + 4,rect().height()+4);
     qDebug() << newPath;
 
     scene()->setSelectionArea(newPath);
@@ -543,8 +536,8 @@ void LineHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 
     QPainterPath newPath;
-    newPath.addRect(scenePos().x() + rect().x() - 2,scenePos().y() + rect().y() - 2 ,rect().width() + 4,rect().height()+4);
-    qDebug() << newPath;
+    newPath.addRect(pos().x() + rect().x() - 2,pos().y() + rect().y() - 2 ,rect().width() + 4,rect().height()+4);
+    //qDebug() << newPath;
 
     scene()->setSelectionArea(newPath);
     parent->setFlag(QGraphicsItem::ItemIsMovable,true);
@@ -591,7 +584,7 @@ void LineHandle::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 
 /**********************************************************************/
 
-Label::Label(QString label, QGraphicsItem *parent) : QGraphicsTextItem(label,parent->parentItem())
+Label::Label(QString label, QGraphicsItem *parent) : QGraphicsTextItem(label,parent)
 {
 
     sigHandler = new ItemSignalHandler((QGraphicsItem*)this,ArrowLabelItemType,NULL);
@@ -608,11 +601,9 @@ Label::Label(QString label, QGraphicsItem *parent) : QGraphicsTextItem(label,par
     comboWidget->setWidget(combo);
     comboWidget->setVisible(false);
 
-    if(!parentArrow->nestedInApp){
-        setFlag(ItemIsMovable,true);
-        setFlag(ItemIsSelectable,true);
-        setFlag(ItemSendsGeometryChanges,true);
-    }
+    setFlag(ItemIsMovable,!parentArrow->nestedInApp);
+    setFlag(ItemIsSelectable,true);
+    setFlag(ItemSendsGeometryChanges,!parentArrow->nestedInApp);
 
 
     pressed = false;
@@ -620,11 +611,14 @@ Label::Label(QString label, QGraphicsItem *parent) : QGraphicsTextItem(label,par
     hasMoved = false;
     offset = QPointF(0,0);
 
-    parentArrow->update();
+    setText(label);
 
-    if(parent->parentItem() == NULL){
-        scene()->addItem(this);
-    }
+
+//    if(parent->parentItem() == NULL){
+//        scene()->addItem(this);
+//    }
+
+    parentArrow->update();
 
 }
 Label::~Label()
@@ -694,20 +688,24 @@ void Label::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     if(pressed){
         moved = true;
         hasMoved = true;
+
     }
     QGraphicsItem::mouseMoveEvent(event);
 }
 
 QVariant Label::itemChange(GraphicsItemChange change, const QVariant &value)
 {
+
     if (change == QGraphicsItem::ItemPositionChange) {
+
 
         if(parentArrow->snap && hasMoved){
             QPointF newPos = value.toPointF();
-            QPointF closestPoint = computeTopLeftGridPoint(newPos);
+                QPointF closestPoint = computeTopLeftGridPoint(newPos);
 
             return closestPoint+=offset;
         }
+
     }
     if (change == QGraphicsItem::ItemSelectedHasChanged) {
         bool selected = isSelected();

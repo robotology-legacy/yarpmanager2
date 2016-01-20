@@ -77,7 +77,7 @@ public:
 
 private:
     bool getConRowByID(int id, int *row);
-	bool getModRowByID(int id, int *row);
+    QTreeWidgetItem *getModRowByID(int id, QTreeWidgetItem *parent = NULL);
     void reportErrors();
     void prepareManagerFrom(yarp::manager::Manager* lazy);
     void updateApplicationWindow();
@@ -89,7 +89,17 @@ private:
     void createConnectionsViewContextMenu();
     void createResourcesViewContextMenu();
     bool timeout(double base, double timeout);
-    bool areAllShutdown();    
+    bool areAllShutdown();
+    void runNestedApplication(QTreeWidgetItem *it,std::vector<int> *MIDs);
+    void stopNestedApplication(QTreeWidgetItem *it,std::vector<int> *MIDs);
+    void killNestedApplication(QTreeWidgetItem *it,std::vector<int> *MIDs);
+    void refreshNestedApplication(QTreeWidgetItem *it,std::vector<int> *MIDs);
+    bool areAllNestedApplicationShutdown(QTreeWidgetItem *it);
+    void closeNestedApplicationStdOut(QTreeWidgetItem *it,int id);
+    void assignHostNestedApplication(QTreeWidgetItem *it);
+    void attachStdOutNestedApplication(QTreeWidgetItem *it,std::vector<int> *MIDs);
+    void modStdOutNestedApplication(QTreeWidgetItem *it, int id,QString s);
+    void selectAllNestedApplicationModule(QTreeWidgetItem *it, bool check);
 
 
 private:

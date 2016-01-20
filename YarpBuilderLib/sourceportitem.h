@@ -21,7 +21,7 @@ class SourcePortItem : public BuilderItem
 {
     friend class Arrow;
 public:
-    SourcePortItem(QString itemName, bool nestedInApp = false, QList<QGraphicsItem *> *itemsList = NULL,
+    SourcePortItem(QString itemName, bool nestedInApp = false,
                    bool editOnStart = false, Application *app = NULL,BuilderItem * parent = 0);
     ~SourcePortItem();
     QRectF boundingRect() const;
@@ -36,7 +36,6 @@ private:
     BuilderItem *parent;
     bool portAvailable;
     QGraphicsProxyWidget *lineEditWidget;
-    QList<QGraphicsItem *> *itemsList;
 
 protected:
     void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
