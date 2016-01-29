@@ -127,7 +127,7 @@ private slots:
     void initApplicationTab();
     BuilderItem *onAddModule(void*, QPointF pos);
     void onAddedApplication(void *app,QPointF pos);
-    BuilderItem *onAddNewConnection(void *, void *);
+    BuilderItem *onAddNewConnection(void *, void *, int connectionId = -1);
     BuilderItem *onAddSourcePort(QString, QPointF pos);
     BuilderItem * onAddDestinationPort(QString,QPointF pos);
 

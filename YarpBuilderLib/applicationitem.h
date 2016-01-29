@@ -13,7 +13,7 @@ public:
     QPointF connectionPoint();
     int type() const ;
     void init();
-    QList<QGraphicsItem *> *getModulesList();
+    QList<QGraphicsItem *> getModulesList();
     Application* getInnerApplication();
     void setModuleRunning(bool,int);
     void setConnectionConnected(bool connected, QString from, QString to);

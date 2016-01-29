@@ -77,8 +77,8 @@ void ApplicationItem::init()
                          sigHandler,SLOT(onModuleSelected(QGraphicsItem*)));
         QObject::connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),
                          sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
-        QObject::connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),
-                         sigHandler,SLOT(onApplicationSelected(QGraphicsItem*)));
+        //QObject::connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),
+        //                 sigHandler,SLOT(onApplicationSelected(QGraphicsItem*)));
         appItem->setZValue(zValue());
         appItem->init();
 
@@ -435,9 +435,9 @@ PortItem* ApplicationItem::findModelFromOutput(OutputData* output)
         QGraphicsItem *it = scene()->items().at(i);
         if(it->type() == (QGraphicsItem::UserType + (int)ApplicationItemType)){
             ApplicationItem *application = (ApplicationItem*)it;
-            for(int j=0; j<application->getModulesList()->count(); j++){
-                if(application->getModulesList()->at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
-                    ModuleItem *module = (ModuleItem*)application->getModulesList()->at(j);
+            for(int j=0; j<application->getModulesList().count(); j++){
+                if(application->getModulesList().at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
+                    ModuleItem *module = (ModuleItem*)application->getModulesList().at(j);
                     for(int k=0;k<module->oPorts.count();k++){
                         PortItem *port = module->oPorts.at(k);
                         //QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getBasePrefix());
@@ -478,9 +478,9 @@ PortItem*  ApplicationItem::findModelFromInput(InputData* input)
 
         if(it->type() == (QGraphicsItem::UserType + (int)ApplicationItemType)){
             ApplicationItem *application = (ApplicationItem*)it;
-            for(int j=0;j<application->getModulesList()->count();j++){
-                if(application->getModulesList()->at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
-                    ModuleItem *module = (ModuleItem*)application->getModulesList()->at(j);
+            for(int j=0;j<application->getModulesList().count();j++){
+                if(application->getModulesList().at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
+                    ModuleItem *module = (ModuleItem*)application->getModulesList().at(j);
                     for(int k=0;k<module->iPorts.count();k++){
                         PortItem *port = module->iPorts.at(k);
                         //QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getBasePrefix());
@@ -552,9 +552,9 @@ void ApplicationItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *o
 
 }
 
-QList <QGraphicsItem*>* ApplicationItem::getModulesList()
+QList<QGraphicsItem *> ApplicationItem::getModulesList()
 {
-    return &childItems();
+    return childItems();
 }
 
 void ApplicationItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
@@ -714,7 +714,7 @@ void ApplicationItem::setOutputPortAvailable(QString oData, bool available)
                 QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(oPort->outData->getPort());
 
                 if(strPort == oData ){
-                    oPort->setAvailable(available);
+                    oPort->setAvailable((available)? PortItem::availbale : PortItem::unavailable);
                 }
             }
 
@@ -746,7 +746,7 @@ void ApplicationItem::setInputPortAvailable(QString iData, bool available)
             foreach (PortItem *iPort, mod->iPorts) {
                 QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(iPort->inData->getPort());
                 if(strPort == iData){
-                    iPort->setAvailable(available);
+                    iPort->setAvailable((available)? PortItem::availbale : PortItem::unavailable);
                 }
             }
 

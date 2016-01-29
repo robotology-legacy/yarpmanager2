@@ -901,7 +901,7 @@ void ApplicationViewWidget::attachStdOutNestedApplication(QTreeWidgetItem *it,st
 /*! \brief Called when the Run button has been pressed */
 bool ApplicationViewWidget::onRun()
 {
-    if(safeManager.busy()){
+    if(safeManager.busy() ){
         return false;
     }
 

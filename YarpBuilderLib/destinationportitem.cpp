@@ -122,7 +122,7 @@ void DestinationPortItem::editingFinished()
 
     for (int i=0;i<scene()->items().count();i++){
         QGraphicsItem *it = scene()->items().at(i);
-        if(((BuilderItem*)it)->type() == QGraphicsItem::UserType + DestinationPortItemType && it != this){
+        if(it->type() == QGraphicsItem::UserType + DestinationPortItemType && (it != this)){
             if(((DestinationPortItem*)it)->getItemName() == text){
                 ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,0,0);");
                 allowOutputs = false;

@@ -84,6 +84,7 @@ class PortItem : public BuilderItem
     friend class Arrow;
 
 public:
+    enum PortStatus {unknown,availbale,unavailable} ;
     PortItem(QString portName, int type, BuilderItem *parent = 0);
     PortItem(InputData*, BuilderItem *parent = 0);
     PortItem(OutputData*, BuilderItem *parent = 0);
@@ -93,7 +94,7 @@ public:
     int getPortType();
     InputData *getInputData();
     OutputData *getOutputData();
-    void setAvailable(bool);
+    void setAvailable(PortStatus);
 
     OutputData *outData;
     InputData *inData;
@@ -107,7 +108,7 @@ protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 private:
-    bool portAvailable;
+    PortStatus portAvailable;
     BuilderItem *parent;
     QPolygonF polygon;
     int portType;

@@ -452,8 +452,9 @@ void BuilderWindow::load(bool refresh)
                 // TODO
             }else{
                 if(source && dest){
-                    Arrow *arrow =(Arrow*)addConnection(source,dest,id);
-                    arrow->setConnection(baseCon);
+//                    Arrow *arrow =(Arrow*)addConnection(source,dest,id);
+//                    arrow->setConnection(baseCon);
+                    onAddNewConnection(source,dest,id);
 
 //                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager,false,editingMode);
 //                    arrow->setActions(connectionsAction);
@@ -497,10 +498,12 @@ BuilderItem *BuilderWindow::onAddDestinationPort(QString name,QPointF pos)
     return it;
 }
 
-BuilderItem *BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
+BuilderItem *BuilderWindow::onAddNewConnection(void *startItem ,void *endItem, int connectionId)
 {
+    Manager *manager = !editingMode ? safeManager : &this->manager;
+
     Application* mainApplication = NULL;
-    mainApplication = manager.getKnowledgeBase()->getApplication();
+    mainApplication = manager->getKnowledgeBase()->getApplication();
     Connection connection;
     BuilderItem *myStartItem = (BuilderItem*)startItem;
     BuilderItem *myEndItem = (BuilderItem*)endItem;
@@ -563,7 +566,7 @@ BuilderItem *BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
         label = "udp";
     }
 
-    Arrow *arrow = (Arrow*)addConnection((BuilderItem*)startItem, (BuilderItem*)endItem,-1);
+    Arrow *arrow = (Arrow*)addConnection((BuilderItem*)startItem, (BuilderItem*)endItem,connectionId);
 
     connection.setFrom(strFrom.c_str());
     connection.setTo(strTo.c_str());
@@ -586,7 +589,7 @@ BuilderItem *BuilderWindow::onAddNewConnection(void *startItem ,void *endItem)
     arrow->getModel()->points.push_back(p1);
     connection.setModel(arrow->getModel());
     connection.setModelBase(*arrow->getModel());
-    connection = manager.getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
+    connection = manager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
 
     arrow->setConnection(connection);
     //arrow->updateModel(p,p1,fakeLblPoint);
@@ -699,10 +702,13 @@ ApplicationItem* BuilderWindow::addApplication(Application *application)
     if(!editingMode){
         connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
         connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
-        connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
     }else{
         connect(appItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
     }
+
+    connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+
+
     scene->addItem(appItem);
     appItem->init();
 
@@ -738,7 +744,9 @@ void BuilderWindow::onAddedApplication(void *app,QPointF pos)
         return;
 
     string strPrefix = "/";
-    const char *uniqeId = manager.getKnowledgeBase()->getUniqueAppID(mainApplication, iapp.getName());
+    char uniqeId[100];
+    memset(uniqeId,0,100);
+    strcpy(uniqeId, manager.getKnowledgeBase()->getUniqueAppID(mainApplication, iapp.getName()));
     qDebug() << "manager.getKnowledgeBase()->getUniqueAppID " << uniqeId;
     strPrefix += string(uniqeId);
     iapp.setPrefix(strPrefix.c_str());
@@ -1097,9 +1105,9 @@ PortItem* BuilderWindow::findModelFromOutput(OutputData* output,QString modulePr
         QGraphicsItem *it = scene->items().at(i);
         if(it->type() == (QGraphicsItem::UserType + (int)ApplicationItemType)){
             ApplicationItem *application = (ApplicationItem*)it;
-            for(int j=0; j<application->getModulesList()->count(); j++){
-                if(application->getModulesList()->at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
-                    ModuleItem *module = (ModuleItem*)application->getModulesList()->at(j);
+            for(int j=0; j<application->getModulesList().count(); j++){
+                if(application->getModulesList().at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
+                    ModuleItem *module = (ModuleItem*)application->getModulesList().at(j);
                     for(int k=0;k<module->oPorts.count();k++){
                         PortItem *port = module->oPorts.at(k);
                         //QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getBasePrefix());
@@ -1138,9 +1146,9 @@ PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePref
 
         if(it->type() == (QGraphicsItem::UserType + (int)ApplicationItemType)){
             ApplicationItem *application = (ApplicationItem*)it;
-            for(int j=0;j<application->getModulesList()->count();j++){
-                if(application->getModulesList()->at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
-                    ModuleItem *module = (ModuleItem*)application->getModulesList()->at(j);
+            for(int j=0;j<application->getModulesList().count();j++){
+                if(application->getModulesList().at(j)->type() == QGraphicsItem::UserType + ModuleItemType){
+                    ModuleItem *module = (ModuleItem*)application->getModulesList().at(j);
                     for(int k=0;k<module->iPorts.count();k++){
                         PortItem *port = module->iPorts.at(k);
                         //QString prefix = QString("%1%2").arg(application->getInnerApplication()->getPrefix()).arg(module->getInnerModule()->getBasePrefix());
@@ -1185,7 +1193,7 @@ void BuilderWindow::setOutputPortAvailable(QString oData, bool available)
                 QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(oPort->outData->getPort());
 
                 if(strPort == oData ){
-                    oPort->setAvailable(available);
+                    oPort->setAvailable((available)? PortItem::availbale : PortItem::unavailable);
                 }
             }
 
@@ -1219,7 +1227,7 @@ void BuilderWindow::setInputPortAvailable(QString iData, bool available)
             foreach (PortItem *iPort, mod->iPorts) {
                 QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(iPort->inData->getPort());
                 if(strPort == iData){
-                    iPort->setAvailable(available);
+                    iPort->setAvailable((available)? PortItem::availbale : PortItem::unavailable);
                 }
             }
 

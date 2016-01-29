@@ -37,6 +37,7 @@ private:
     QTreeWidgetItem *appDescr;
     QTreeWidgetItem *appVersion;
     QTreeWidgetItem *appAuthors;
+    QTreeWidgetItem *appPrefix;
 
     QTreeWidgetItem *modName;
     QTreeWidgetItem *modNode;

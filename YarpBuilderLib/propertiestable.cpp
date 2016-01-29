@@ -25,6 +25,7 @@ PropertiesTable::PropertiesTable(Manager *manager,QWidget *parent) : QWidget(par
 
     appName = NULL;
     appDescr = NULL;
+    appPrefix = NULL;
     appVersion = NULL;
     appAuthors = NULL;
     nodeCombo = NULL;
@@ -54,6 +55,8 @@ void PropertiesTable::showApplicationTab(Application *application)
         appName = new QTreeWidgetItem(appProperties,QStringList() << "Name" << application->getName());
         appDescr = new QTreeWidgetItem(appProperties,QStringList() << "Description" << application->getDescription());
         appVersion = new QTreeWidgetItem(appProperties,QStringList() << "Version" << application->getVersion());
+        appPrefix = new QTreeWidgetItem(appProperties,QStringList() << "Prefix" << application->getPrefix());
+
         QString authors;
         for(int i=0;i<application->authorCount();i++){
             authors = QString("%1%2;").arg(authors).arg(application->getAuthorAt(i).getName());
@@ -62,8 +65,10 @@ void PropertiesTable::showApplicationTab(Application *application)
 
         appProperties->addTopLevelItem(appName);
         appProperties->addTopLevelItem(appDescr);
+        appProperties->addTopLevelItem(appPrefix);
         appProperties->addTopLevelItem(appVersion);
         appProperties->addTopLevelItem(appAuthors);
+
     }
     connect(appProperties,SIGNAL(itemChanged(QTreeWidgetItem*,int)),this,SLOT(onAppItemChanged(QTreeWidgetItem*,int)));
     connect(appProperties,SIGNAL(itemDoubleClicked(QTreeWidgetItem*,int)),this,SLOT(onAppItemDoubleClicked(QTreeWidgetItem*,int)));
@@ -252,7 +257,10 @@ void PropertiesTable::onAppItemChanged(QTreeWidgetItem *it,int col)
     if(currentApplication){
         currentApplication->setDescription(appDescr->text(1).toLatin1().data());
         currentApplication->setVersion(appVersion->text(1).toLatin1().data());
+        currentApplication->setPrefix(appPrefix->text(1).toLatin1().data());
+        //manager->getKnowledgeBase()->setApplicationPrefix(currentApplication, appPrefix->text(1).toLatin1().data(), false);
     }
+
 
 
     modified();

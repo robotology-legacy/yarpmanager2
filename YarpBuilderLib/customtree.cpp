@@ -1,7 +1,7 @@
 #include "customtree.h"
 #include <QMimeData>
 #include <QDrag>
-#include <qDebug>
+#include <qdebug.h>
 #include "commons.h"
 
 CustomTree::CustomTree(QWidget *parent) :
@@ -21,7 +21,7 @@ CustomTree::CustomTree(QWidget *parent) :
     //addTopLevelItem(new QTreeWidgetItem(this,QStringList() << "Model4"));
 
     setDragEnabled(true);
-    setDragDropMode(DragDropMode::DragOnly);
+    setDragDropMode(DragOnly);
 }
 
 

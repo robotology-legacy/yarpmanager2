@@ -12,10 +12,66 @@ TARGET = QtYARPManager
 TEMPLATE = app
 
 linux-g++{
-    INCLUDEPATH += /usr/local/src/yarp/src/libYARP_OS/include
-    INCLUDEPATH += /usr/local/src/yarp/src/libYARP_dev/include
-    INCLUDEPATH += /usr/local/build/generated_include/
-    INCLUDEPATH += /usr/local/src/yarpmanager/libymanager/include
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_OS/include
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/libYARP_dev/include
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/build/generated_include/
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_manager/include
+    INCLUDEPATH += ../YarpBuilderLib
+
+    CONFIG(debug, debug|release) {
+        LIBS += -L/home/apaikan/Install/robotology/yarp-apaikan/build/lib
+        LIBS += -L"$$(ACE_ROOT)/lib"
+        LIBS += -L"$$(GSL_DIR)/lib"
+        LIBS += -L/home/apaikan/Install/robotology/yarpmanager2/build-YarpBuilderLib-Desktop_Qt_5_2_1_GCC_64bit-Debug
+
+        LIBS += -lYARP_init
+        LIBS += -lYARP_manager
+        LIBS += -ltinyxml
+        LIBS += -lYARP_math
+        LIBS += -lYARP_sig
+        LIBS += -lYARP_OS
+        LIBS += -lYarpBuilderLib
+
+        LIBS += -lgsl
+        LIBS += -lgslcblas
+        #LIBS += -lyarpcar
+        #LIBS += -lYARP_wire_rep_utilsd
+        #LIBS += -lyarp_tcprosd
+        #LIBS += -lyarp_bayer
+        #LIBS += -lyarp_humand
+        LIBS += -lACE
+
+        deps_libs.files += /home/apaikan/Install/robotology/yarpmanager2/build-YarpBuilderLib-Desktop_Qt_5_2_1_GCC_64bit-Debug/libYarpBuilderLib.so
+
+
+
+    }else{
+        LIBS += -L$$(YARP_ROOT)/build/lib/Release
+        LIBS += -L"$$(ACE_ROOT)/lib"
+        LIBS += -L"$$(GSL_DIR)/lib"
+        LIBS += -L../build-YarpBuilderLib-Desktop_Qt_5_3_MSVC2010_OpenGL_32bit-Release/release
+
+        LIBS += -lYARP_math
+        LIBS += -lYARP_manager
+        LIBS += -lYARP_priv_tinyxml
+        LIBS += -lYARP_OS
+        LIBS += -lYARP_sig
+        LIBS += -lYARP_init
+        LIBS += -lgsl
+        LIBS += -lgslcblas
+        LIBS += -lyarpcar
+        LIBS += -lyarp_bayer
+        LIBS += -lACE
+        LIBS += -lWinmm
+        LIBS += -lAdvapi32
+        LIBS += -lShell32
+        LIBS += -lYarpBuilderLib
+    }
+
+        deps_libs.path = $$OUT_PWD/debug
+
+        INSTALLS = deps_libs
+
 }
 
 win32-msvc2010{

@@ -3,7 +3,7 @@
 #include <QDebug>
 #include <QCursor>
 #include <QGraphicsScene>
-
+#include "math.h"
 
 #define TRIANGLEH   (double)((double)PORT_LINE_WIDTH * (double)sqrt(3.0) ) / 2.0
 
@@ -393,7 +393,7 @@ void ModuleItem::portMoved(PortItem *port,QGraphicsSceneMouseEvent *e)
 PortItem::PortItem(QString portName, int type, BuilderItem *parent) : BuilderItem(parent)
 {
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
-    portAvailable = false;
+    portAvailable = unknown;
 
     polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
 
@@ -428,7 +428,7 @@ PortItem::PortItem(InputData *node, BuilderItem *parent) : BuilderItem(parent)
 {
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
     inData = node;
-    portAvailable = false;
+    portAvailable = unknown;
 
     polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
 
@@ -462,7 +462,7 @@ PortItem::PortItem(OutputData* node, BuilderItem *parent) : BuilderItem(parent)
 {
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
     outData = node;
-    portAvailable = false;
+    portAvailable = unknown;
     polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
 
     setAcceptHoverEvents(true);
@@ -494,18 +494,31 @@ PortItem::PortItem(OutputData* node, BuilderItem *parent) : BuilderItem(parent)
 void PortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH/2));
-    if(!portAvailable){
+
+    switch (portAvailable) {
+    case unavailable:
         if(!hovered){
             painter->setBrush(QBrush(QColor("#F74D4D")));
         }else{
             painter->setBrush(QBrush(QColor("#BF0303")));
         }
-    }else{
+        break;
+    case availbale:
         if(!hovered){
             painter->setBrush(QBrush(QColor("#1CE61C")));
         }else{
             painter->setBrush(QBrush(QColor("#008C00")));
         }
+        break;
+    case unknown:
+        if(!hovered){
+            painter->setBrush(QBrush(QColor("#8C8c8c")));
+        }else{
+            painter->setBrush(QBrush(QColor("#4B4B4B")));
+        }
+        break;
+    default:
+        break;
     }
 
     painter->drawPolygon(polygon);
@@ -610,7 +623,7 @@ QVariant PortItem::itemChange(GraphicsItemChange change, const QVariant &value)
     return value;
 }
 
-void PortItem::setAvailable(bool available)
+void PortItem::setAvailable(PortStatus available)
 {
     portAvailable = available;
     update();

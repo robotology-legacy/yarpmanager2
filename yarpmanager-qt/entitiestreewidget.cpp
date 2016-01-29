@@ -82,7 +82,7 @@ EntitiesTreeWidget::EntitiesTreeWidget(QWidget *parent) : QTreeWidget(parent)
     #endif
 
     setDragEnabled(true);
-    setDragDropMode(DragDropMode::DragOnly);
+    setDragDropMode(DragOnly);
 }
 
 void EntitiesTreeWidget::setExtEditor(string editor)

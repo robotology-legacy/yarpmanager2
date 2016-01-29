@@ -479,6 +479,26 @@ void MainWindow::viewApplication(yarp::manager::Application *app,bool editingMod
     int index = ui->mainTabs->addTab(w,app->getName());
     ui->mainTabs->setTabIcon(index,QIcon(":/run22.svg"));
     ui->mainTabs->setCurrentIndex(index);
+
+    if(editingMode){
+        ui->actionSelect_All->setEnabled(false);
+        ui->actionRefresh_Status->setEnabled(false);
+        ui->actionExport_Graph->setEnabled(false);
+        ui->actionConnect->setEnabled(false);
+        ui->actionDisconnect->setEnabled(false);
+        ui->actionRun->setEnabled(false);
+        ui->actionStop->setEnabled(false);
+        ui->actionKill->setEnabled(false);
+    }else{
+        ui->actionSelect_All->setEnabled(true);
+        ui->actionRefresh_Status->setEnabled(true);
+        ui->actionExport_Graph->setEnabled(true);
+        ui->actionConnect->setEnabled(true);
+        ui->actionDisconnect->setEnabled(true);
+        ui->actionRun->setEnabled(true);
+        ui->actionStop->setEnabled(true);
+        ui->actionKill->setEnabled(true);
+    }
 }
 
 /*! \brief Exports the actual Graph
@@ -629,8 +649,8 @@ void MainWindow::onTabClose(int index)
 
         if(aw->isModified() && aw->isEditingMode()){
             QMessageBox::StandardButton btn = QMessageBox::question(this,"Save",QString("%1 has been modified\nDo you want to save it before closing?").arg(aw->getAppName().toLatin1().data()),
-                                                                    QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No | QMessageBox::StandardButton::Cancel);
-            if(btn == QMessageBox::StandardButton::Yes){
+                                                                    QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+            if(btn == QMessageBox::Yes){
                 bool ret = aw->save();
                 if(ret){
                     onReopenApplication(aw->getAppName(),aw->getFileName());
@@ -639,7 +659,7 @@ void MainWindow::onTabClose(int index)
                     return;
                 }
             }
-            if(btn == QMessageBox::StandardButton::Cancel){
+            if(btn == QMessageBox::Cancel){
                 return;
             }
         }
@@ -710,14 +730,27 @@ void MainWindow::onTabChangeItem(int index)
 
     GenericViewWidget *w = (GenericViewWidget*)ui->mainTabs->widget(index);
     if(w && w->getType() == yarp::manager::APPLICATION){
-        ui->actionSelect_All->setEnabled(true);
-        ui->actionRefresh_Status->setEnabled(true);
-        ui->actionExport_Graph->setEnabled(true);
-        ui->actionConnect->setEnabled(true);
-        ui->actionDisconnect->setEnabled(true);
-        ui->actionRun->setEnabled(true);
-        ui->actionStop->setEnabled(true);
-        ui->actionKill->setEnabled(true);
+        ApplicationViewWidget *aw = (ApplicationViewWidget*)w;
+        if(aw->isEditingMode()){
+            ui->actionSelect_All->setEnabled(false);
+            ui->actionRefresh_Status->setEnabled(false);
+            ui->actionExport_Graph->setEnabled(false);
+            ui->actionConnect->setEnabled(false);
+            ui->actionDisconnect->setEnabled(false);
+            ui->actionRun->setEnabled(false);
+            ui->actionStop->setEnabled(false);
+            ui->actionKill->setEnabled(false);
+        }else{
+            ui->actionSelect_All->setEnabled(true);
+            ui->actionRefresh_Status->setEnabled(true);
+            ui->actionExport_Graph->setEnabled(true);
+            ui->actionConnect->setEnabled(true);
+            ui->actionDisconnect->setEnabled(true);
+            ui->actionRun->setEnabled(true);
+            ui->actionStop->setEnabled(true);
+            ui->actionKill->setEnabled(true);
+        }
+
 
         if(w->isModified()){
             ui->actionSave->setEnabled(true);
@@ -727,7 +760,6 @@ void MainWindow::onTabChangeItem(int index)
             ui->actionSave_As->setEnabled(false);
         }
 
-        ApplicationViewWidget *aw = (ApplicationViewWidget*)w;
         if(builderToolBar){
             removeToolBar(builderToolBar);
             builderToolBar = NULL;
