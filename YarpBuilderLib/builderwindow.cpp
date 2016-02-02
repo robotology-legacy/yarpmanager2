@@ -149,18 +149,20 @@ BuilderWindow::~BuilderWindow()
 {
     //delete ui;
     for(int i=0;i<scene->items().count();i++){
-        BuilderItem *it =((BuilderItem*)scene->items().at(i));
+        QGraphicsItem *it = scene->items().at(i);
         if(it->type() == QGraphicsItem::UserType + (int)ModuleItemType){
-            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-            disconnect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
-            disconnect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
-            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+            BuilderItem *bItem  = (BuilderItem*)it;
+            disconnect(bItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            disconnect(bItem->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
+            disconnect(bItem->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
+            disconnect(bItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
         }
         if(it->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
-            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-            disconnect(it->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
-            disconnect(it->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
-            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+            BuilderItem *bItem  = (BuilderItem*)it;
+            disconnect(bItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            disconnect(bItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+            disconnect(bItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+            disconnect(bItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
         }
     }
     view->close();
@@ -916,6 +918,7 @@ void BuilderWindow::initApplicationTab()
     if(!editingMode){
         return;
     }
+
     propertiesTab->showApplicationTab(manager.getKnowledgeBase()->getApplication());
 //    if(!propertiesTab){
 //        return;
