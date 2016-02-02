@@ -70,13 +70,16 @@ void BuilderScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 
 void BuilderScene::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    if(currentLine && event->button() == Qt::RightButton){
+    QPointF p = event->scenePos();
+    QGraphicsItem *it = itemAt(p,QTransform());
+    if(currentLine && !it){
         removeItem(currentLine);
         delete currentLine;
         currentLine = NULL;
-    }else{
-        QGraphicsScene::mousePressEvent(event);
     }
+
+    QGraphicsScene::mousePressEvent(event);
+
 
     //startConnectionItem = NULL;
 }
@@ -107,7 +110,7 @@ void BuilderScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     //qDebug() << "mouseMoveEvent";
     if(currentLine){
         //qDebug() << startingPoint.x() << " || " << startingPoint.y() << " || " << QCursor::pos().x() << " || " << QCursor::pos().y();
-        currentLine->setLine(startingPoint.x(),startingPoint.y(),event->scenePos().x(),event->scenePos().y());
+        currentLine->setLine(startingPoint.x(),startingPoint.y(),event->scenePos().x()-1,event->scenePos().y()-1);
     }
     QGraphicsScene::mouseMoveEvent(event);
 }

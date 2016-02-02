@@ -11,12 +11,7 @@ TEMPLATE = lib
 
 DEFINES += YARPBUILDERLIB_LIBRARY
 
-    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_OS/include
-    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_dev/include
-    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/build/generated_include/
-    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/yarpmanager/libymanager/include
-    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_manager/include
-    INCLUDEPATH += ../yarpmanager-qt
+
 
 SOURCES += yarpbuilderlib.cpp \
     applicationitem.cpp \
@@ -60,20 +55,60 @@ DISTFILES += \
 
 FORMS +=
 
-CONFIG(debug, debug|release) {
-    LIBS += -L/home/apaikan/Install/robotology/yarp-apaikan/build/lib
-        LIBS += -lYARP_init
-        LIBS += -lYARP_manager
-        #LIBS += -lYARP_priv_tinyxml
-        LIBS += -lYARP_math
-        LIBS += -lYARP_sig
-        LIBS += -lYARP_OS
-}else{
-    LIBS += -L/home/apaikan/Install/robotology/yarp-apaikan/build/lib
-        LIBS += -lYARP_math
-        LIBS += -lYARP_manager
-        #LIBS += -lYARP_priv_tinyxml
-        LIBS += -lYARP_OS
-        LIBS += -lYARP_sig
-        LIBS += -lYARP_init
+
+
+win32-msvc2010{
+    INCLUDEPATH += $$(YARP_ROOT)/src/libYARP_OS/include
+    INCLUDEPATH += $$(YARP_ROOT)/src/libYARP_dev/include
+    INCLUDEPATH += $$(YARP_ROOT)/build/generated_include/
+    INCLUDEPATH += $$(YARP_ROOT)/src/yarpmanager/libymanager/include
+    INCLUDEPATH += $$(YARP_ROOT)/src/libYARP_manager/include
+    INCLUDEPATH += ../yarpmanager-qt
+
+    CONFIG(debug, debug|release) {
+        LIBS += -L$$(YARP_ROOT)/build/lib/Debug
+            LIBS += -lYARP_initd
+            LIBS += -lYARP_managerd
+            LIBS += -lYARP_priv_tinyxmld
+            LIBS += -lYARP_mathd
+            LIBS += -lYARP_sigd
+            LIBS += -lYARP_OSd
+    }else{
+        LIBS += -L$$(YARP_ROOT)/build/lib/Release
+            LIBS += -lYARP_math
+            LIBS += -lYARP_manager
+            LIBS += -lYARP_priv_tinyxml
+            LIBS += -lYARP_OS
+            LIBS += -lYARP_sig
+            LIBS += -lYARP_init
+    }
 }
+
+linux-g++{
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_OS/include
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_dev/include
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/build/generated_include/
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/yarpmanager/libymanager/include
+    INCLUDEPATH += /home/apaikan/Install/robotology/yarp-apaikan/src/libYARP_manager/include
+    INCLUDEPATH += ../yarpmanager-qt
+
+    CONFIG(debug, debug|release) {
+        LIBS += -L/home/apaikan/Install/robotology/yarp-apaikan/build/lib
+            LIBS += -lYARP_init
+            LIBS += -lYARP_manager
+            #LIBS += -lYARP_priv_tinyxml
+            LIBS += -lYARP_math
+            LIBS += -lYARP_sig
+            LIBS += -lYARP_OS
+    }else{
+        LIBS += -L/home/apaikan/Install/robotology/yarp-apaikan/build/lib
+            LIBS += -lYARP_math
+            LIBS += -lYARP_manager
+            #LIBS += -lYARP_priv_tinyxml
+            LIBS += -lYARP_OS
+            LIBS += -lYARP_sig
+            LIBS += -lYARP_init
+    }
+}
+
+

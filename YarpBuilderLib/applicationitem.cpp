@@ -32,7 +32,7 @@ ApplicationItem::~ApplicationItem()
 {
     if(editingMode && mainAppManager){
         Application* mainApplication = mainAppManager->getKnowledgeBase()->getApplication();
-        mainAppManager->getKnowledgeBase()->removeIApplicationFromApplication(mainApplication,application->getLabel());
+        mainAppManager->getKnowledgeBase()->removeIApplicationFromApplication(mainApplication,application->getName());
         application = NULL;
     }
 }
@@ -136,7 +136,7 @@ void ApplicationItem::init()
         BuilderItem *source = NULL;
         BuilderItem *dest = NULL;
         QString inModulePrefix,outModulePrefix;
-        findInputOutputData((*citr), allModules, input, output);
+        findInputOutputData((*citr), !editingMode ? allModules : modules, input, output);
         if(output){
             source = findModelFromOutput(output);
         }else{

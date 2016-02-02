@@ -148,21 +148,21 @@ void BuilderWindow::prepareManagerFrom(Manager* lazy,
 BuilderWindow::~BuilderWindow()
 {
     //delete ui;
-//    for(int i=0;i<scene->items().count();i++){
-//        BuilderItem *it =((BuilderItem*)scene->items().at(i));
-//        if(it->type() == QGraphicsItem::UserType + (int)ModuleItemType){
-//            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-//            disconnect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
-//            disconnect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
-//            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
-//        }
-//        if(it->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
-//            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
-//            disconnect(it->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
-//            disconnect(it->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
-//            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
-//        }
-//    }
+    for(int i=0;i<scene->items().count();i++){
+        BuilderItem *it =((BuilderItem*)scene->items().at(i));
+        if(it->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+        }
+        if(it->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
+            disconnect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
+            disconnect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+        }
+    }
     view->close();
     scene->clear();
 
@@ -744,11 +744,9 @@ void BuilderWindow::onAddedApplication(void *app,QPointF pos)
         return;
 
     string strPrefix = "/";
-    char uniqeId[100];
-    memset(uniqeId,0,100);
-    strcpy(uniqeId, manager.getKnowledgeBase()->getUniqueAppID(mainApplication, iapp.getName()));
-    qDebug() << "manager.getKnowledgeBase()->getUniqueAppID " << uniqeId;
-    strPrefix += string(uniqeId);
+    string  uniqeId = manager.getKnowledgeBase()->getUniqueAppID(mainApplication, iapp.getName());
+
+    strPrefix += (uniqeId);
     iapp.setPrefix(strPrefix.c_str());
     Application* application  = manager.getKnowledgeBase()->addIApplicationToApplication(mainApplication, iapp);
     if(application){
@@ -1376,10 +1374,10 @@ void CustomView::contextMenuEvent(QContextMenuEvent *event)
 
             QAction *act = menu.exec(event->globalPos());
             if(act == addSourcePortAction){
-                addSourcePort("Source",event->pos());
+                addSourcePort("Source",mapToScene(event->pos()));
             }
             if(act == addDestinationPortAction){
-                addDestinationPort("Destination",event->pos());
+                addDestinationPort("Destination",mapToScene(event->pos()));
             }
             if(act == pasteAction){
                 pasteSelectedItems(event->pos());
