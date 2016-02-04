@@ -132,6 +132,7 @@ win32-msvc2010{
         LIBS += -lAdvapi32
         LIBS += -lShell32
         LIBS += -lYarpBuilderLib
+
     }
 
         deps_libs.path = $$OUT_PWD/debug

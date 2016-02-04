@@ -79,6 +79,8 @@ int SourcePortItem::type() const
 void SourcePortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
 
+    //painter->fillRect(boundingRect(),QBrush(Qt::red));
+
     QBrush availableBrush;
     if(!portAvailable){
         availableBrush = QBrush(QColor("#BF0303"));

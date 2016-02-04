@@ -132,11 +132,15 @@ public:
     void updatePosition();
     QList <LineHandle*> handles();
     void removeHandle(LineHandle*);
+    int getHandleIndex(LineHandle *handle);
+    LineHandle *getLineHandle(int index);
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event);
-    //void mousePressEvent(QGraphicsSceneMouseEvent *event);
+    void mousePressEvent(QGraphicsSceneMouseEvent *e);
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *e);
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *e);
     QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 
@@ -159,6 +163,7 @@ private:
     QPolygonF polyline;
     QPolygonF boundingPolyline;
     int id;
+
 
     QPointF startP;
     QPointF endP;
@@ -190,6 +195,7 @@ private:
     bool pressed;
     int rectSize;
     QPointF offset;
+    bool ctrlPressed;
 };
 
 

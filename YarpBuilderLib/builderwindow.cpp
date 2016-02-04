@@ -87,6 +87,8 @@ void BuilderWindow::init()
     m_modified = false;
     modified(false);
 
+    onRestoreZoom();
+
 }
 
 bool BuilderWindow::save()
@@ -407,7 +409,7 @@ void BuilderWindow::load(bool refresh)
                         source->setPos(model.points[1].x /*+ source->boundingRect().width()/2*/,
                                        model.points[1].y /*+ source->boundingRect().height()/2*/);
                     }else{
-                        source->setPos(10 /*+ source->boundingRect().width()/2*/, index);
+                        source->setPos(10 + source->boundingRect().width()/2, index);
                     }
                 }
 
@@ -440,7 +442,7 @@ void BuilderWindow::load(bool refresh)
                         dest->setPos(model.points[size-1].x /*+ dest->boundingRect().width()/2*/,
                                        model.points[size-1].y/* + dest->boundingRect().height()/2*/);
                     }else{
-                        dest->setPos(400 /*+ dest->boundingRect().width()/2*/, index);
+                        dest->setPos(400 + dest->boundingRect().width()/2, index);
                     }
                 }
 
@@ -456,7 +458,8 @@ void BuilderWindow::load(bool refresh)
                 if(source && dest){
 //                    Arrow *arrow =(Arrow*)addConnection(source,dest,id);
 //                    arrow->setConnection(baseCon);
-                    onAddNewConnection(source,dest,id);
+                    Arrow *arrow =(Arrow*)addConnection(source,dest,id);
+                    arrow->setConnection(baseCon);
 
 //                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager,false,editingMode);
 //                    arrow->setActions(connectionsAction);
@@ -625,7 +628,7 @@ BuilderItem * BuilderWindow::addConnection(void *startItem ,void *endItem, int c
    ((BuilderItem*)startItem)->addArrow(arrow);
    ((BuilderItem*)endItem)->addArrow(arrow);
    scene->addItem(arrow);
-   arrow->setZValue(1000.0);
+   //arrow->setZValue(1000.0);
    arrow->updatePosition();
    scene->items().append(arrow);
 
@@ -689,8 +692,8 @@ BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
         it->setPos(module->getModelBase().points[0].x /*+ it->boundingRect().width()/2*/,
                 module->getModelBase().points[0].y /*+ it->boundingRect().height()/2*/);
     }else{
-        it->setPos(index%900+10 /*+ it->boundingRect().width()/2*/,
-                   (index/900)*100+10 /*+ it->boundingRect().height()/2*/);
+        it->setPos(index%900+10 + it->boundingRect().width()/2,
+                   (index/900)*100+10 + it->boundingRect().height()/2);
         index += 300;
     }
     return it;
@@ -920,34 +923,7 @@ void BuilderWindow::initApplicationTab()
     }
 
     propertiesTab->showApplicationTab(manager.getKnowledgeBase()->getApplication());
-//    if(!propertiesTab){
-//        return;
-//    }
-//    Application *auxApp = app;
-//    if(application){
-//        auxApp = application->getInnerApplication();
-//    }
-//    if(!appProperties){
-//        appProperties = new QTreeWidget();
-//    }
-//    propertiesTab->clear();
-//    propertiesTab->addTab(appProperties,"Application Properties");
-//    appProperties->clear();
-//    if(appProperties->topLevelItemCount() <=0){
-//        QTreeWidgetItem *appName = new QTreeWidgetItem(appProperties,QStringList() << "Name" << auxApp->getName());
-//        QTreeWidgetItem *appDescr = new QTreeWidgetItem(appProperties,QStringList() << "Description" << auxApp->getDescription());
-//        QTreeWidgetItem *appVersion = new QTreeWidgetItem(appProperties,QStringList() << "Version" << auxApp->getVersion());
-//        QString authors;
-//        for(int i=0;i<auxApp->authorCount();i++){
-//            authors = QString("%1%2;").arg(authors).arg(auxApp->getAuthorAt(i).getName());
-//        }
-//        QTreeWidgetItem *appAuthors = new QTreeWidgetItem(appProperties,QStringList() << "Name" << authors);
 
-//        appProperties->addTopLevelItem(appName);
-//        appProperties->addTopLevelItem(appDescr);
-//        appProperties->addTopLevelItem(appVersion);
-//        appProperties->addTopLevelItem(appAuthors);
-//    }
 
 }
 
@@ -1263,13 +1239,13 @@ CustomView::CustomView(BuilderWindow *builder,QGraphicsView *parent) : QGraphics
     rubberBand = NULL;
     this->builder = builder;
 
-//        QGLWidget *viewport = new QGLWidget(QGLFormat(QGL::SampleBuffers));
-//        setViewport(viewport);
+        QGLWidget *viewport = new QGLWidget(QGLFormat(QGL::SampleBuffers));
+        setViewport(viewport);
 
     setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
     setDragMode(QGraphicsView::RubberBandDrag);
     setOptimizationFlags(QGraphicsView::DontSavePainterState |QGraphicsView::DontAdjustForAntialiasing);
-    setViewportUpdateMode(QGraphicsView::MinimalViewportUpdate);
+    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
 }
@@ -1325,9 +1301,30 @@ void CustomView::keyPressEvent(QKeyEvent *event){
     QGraphicsView::keyPressEvent(event);
 }
 
+void CustomView::mouseReleaseEvent(QMouseEvent* event)
+{
+    qDebug() << "RELEASE ";
+    foreach (QGraphicsItem *it, scene()->selectedItems()) {
+        qDebug() << "TYPE " << it->type();
+        qDebug() << it;
+        qDebug() << "***************************";
+    }
+    qDebug() << "################################\n\n";
+
+    QGraphicsView::mouseReleaseEvent(event);
+}
+
 void CustomView::mousePressEvent(QMouseEvent* event)
 {
-    origin = event->pos();
+    qDebug() << "PRESS";
+    foreach (QGraphicsItem *it, scene()->selectedItems()) {
+        qDebug() << "TYPE " << it->type();
+        qDebug() << it;
+        qDebug() << "***************************";
+    }
+    qDebug() << "################################\n\n";
+
+
     if(event->button()==Qt::LeftButton){
         if(event->modifiers()==Qt::ControlModifier){
             setDragMode(QGraphicsView::ScrollHandDrag);
@@ -1355,6 +1352,7 @@ void CustomView::mousePressEvent(QMouseEvent* event)
 
 void CustomView::contextMenuEvent(QContextMenuEvent *event)
 {
+
     QMenu menu(this);
     QGraphicsItem *it = itemAt(event->pos());
     QAction *copyAction = NULL;
@@ -1385,6 +1383,7 @@ void CustomView::contextMenuEvent(QContextMenuEvent *event)
             if(act == pasteAction){
                 pasteSelectedItems(event->pos());
             }
+            QGraphicsView::contextMenuEvent(event);
             return;
         }
 
@@ -1427,11 +1426,13 @@ void CustomView::contextMenuEvent(QContextMenuEvent *event)
 
 
     if(menu.isEmpty()){
+        QGraphicsView::contextMenuEvent(event);
         return;
     }
 
     QAction *act = menu.exec(event->globalPos());
     if(!act){
+        QGraphicsView::contextMenuEvent(event);
         return;
     }
 
@@ -1450,6 +1451,7 @@ void CustomView::contextMenuEvent(QContextMenuEvent *event)
     }
 
     update();
+    QGraphicsView::contextMenuEvent(event);
 
 }
 

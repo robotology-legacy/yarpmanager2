@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += widgets
+QT       += widgets opengl
 
 TARGET = YarpBuilderLib
 TEMPLATE = lib

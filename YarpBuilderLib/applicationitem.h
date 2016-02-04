@@ -23,8 +23,8 @@ public:
     void setInputPortAvailable(QString iData, bool available);
 
 private:
-    void updateBoundingRect();
-    void updateSizes(BuilderItem *it);
+    void updateBoundingRect(QList<QGraphicsItem *> items);
+    void updateSizes(QGraphicsItem *it, QGraphicsItem *parent = NULL);
     void findInputOutputData(Connection& cnn,  ModulePContainer &modules,
                              InputData* &input_, OutputData* &output_);
     PortItem* findModelFromOutput(OutputData* output);

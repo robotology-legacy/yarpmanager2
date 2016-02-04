@@ -16,6 +16,7 @@ BuilderScene::BuilderScene(QObject *parent) :
     startConnectionItem = NULL;
     //connect(this,SIGNAL(changed(QList<QRectF>)),this,SLOT(onSceneChanged(QList<QRectF>)));
     snap = false;
+    setStickyFocus(true);
 }
 
 

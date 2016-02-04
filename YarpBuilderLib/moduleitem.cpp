@@ -86,7 +86,7 @@ void ModuleItem::init()
             iPorts.append(new PortItem(&module->getInputAt(i),this));
         }
         prepareGeometryChange();
-        boundingR.setX(boundingR.x() - (PORT_LINE_WIDTH + TRIANGLEH / 2.0) );
+        boundingR.setX((boundingR.x() - (PORT_LINE_WIDTH + TRIANGLEH / 2.0) ));
 //        boundingR.setWidth(boundingR.width() +  PORT_LINE_WIDTH + TRIANGLEH );
 
 
@@ -171,8 +171,11 @@ int ModuleItem::type() const
 void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     qreal partialH ;
-    //painter->fillRect(boundingR,QBrush(Qt::red));
+    //painter->fillRect(boundingRect(),QBrush(Qt::red));
+
     //Input Ports
+
+
     if(module->inputCount() <= 1){
         partialH = (qreal)mainRect.height()/(qreal)((qreal)module->inputCount() + 1.0);
         for(int i=0; i < module->inputCount(); i++){
@@ -236,7 +239,7 @@ void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     }
     QPainterPath path;
     path.addRoundedRect( mainRect, 5.0, 5.0 );
-    if (isSelected()) {
+    if (isSelected()) {\
         painter->setBrush(QBrush(QColor(220,220,220)));
     }else{
         painter->setBrush(QBrush(QColor(Qt::white)));
@@ -251,13 +254,18 @@ void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     painter->setPen(QPen(QBrush(QColor(Qt::black)),1));
     painter->drawText(mainRect,Qt::AlignCenter,itemName);
 
+    //painter->fillRect(-4,-4,8,8,QBrush(Qt::yellow));
+
 
 }
 
 
 QRectF ModuleItem::boundingRect() const
 {
-    QRectF br = QRectF(boundingR.x() - BORDERWIDTH, boundingR.y() - BORDERWIDTH , boundingR.width() + (2*BORDERWIDTH), boundingR.height() + (2*BORDERWIDTH));
+    QRectF br = QRectF(boundingR.x() - BORDERWIDTH,
+                       boundingR.y() - BORDERWIDTH ,
+                       boundingR.width() + (2*BORDERWIDTH),
+                       boundingR.height() + (2*BORDERWIDTH));
     //qDebug() << br;
     return br;
 }
@@ -407,6 +415,7 @@ PortItem::PortItem(QString portName, int type, BuilderItem *parent) : BuilderIte
     this->itemName = portName;
     setToolTip(itemName);
     this->parent = parent;
+    this->nestedInApp = parent->nestedInApp;
     portType = type;
 
     sigHandler = NULL;
@@ -441,6 +450,7 @@ PortItem::PortItem(InputData *node, BuilderItem *parent) : BuilderItem(parent)
     this->itemName = node->getPort();
     setToolTip(itemName);
     this->parent = parent;
+    this->nestedInApp = parent->nestedInApp;
     portType = INPUT_PORT;
 
     sigHandler = NULL;
@@ -474,6 +484,7 @@ PortItem::PortItem(OutputData* node, BuilderItem *parent) : BuilderItem(parent)
     this->itemName = node->getPort();
     setToolTip(itemName);
     this->parent = parent;
+    this->nestedInApp = parent->nestedInApp;
     portType = OUTPUT_PORT;
 
     sigHandler = NULL;
@@ -592,7 +603,10 @@ int PortItem::getPortType()
 
 QRectF PortItem::boundingRect() const
 {
-    QRectF br = QRectF(boundingR.x() - BORDERWIDTH, boundingR.y() - BORDERWIDTH , boundingR.width() + (2*BORDERWIDTH), boundingR.height() + (2*BORDERWIDTH));
+    QRectF br = QRectF(boundingR.x() - BORDERWIDTH,
+                       boundingR.y() - BORDERWIDTH ,
+                       boundingR.width() + (2*BORDERWIDTH),
+                       boundingR.height() + (2*BORDERWIDTH));
     return br;
 }
 

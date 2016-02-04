@@ -149,6 +149,7 @@ protected:
     void wheelEvent(QWheelEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void mousePressEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
     void contextMenuEvent(QContextMenuEvent *event);
 
     void deleteAllItems();
@@ -161,7 +162,7 @@ private:
 private:
     BuilderWindow *builder;
     bool editingMode;
-    QPoint origin;
+    //QPoint origin;
     QPoint m_lastDragPos;
     QPoint m_rubberBandOrigin;
     bool m_rubberBandActive;
