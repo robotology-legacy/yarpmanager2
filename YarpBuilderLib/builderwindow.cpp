@@ -293,7 +293,7 @@ void BuilderWindow::load(bool refresh)
 
 
     usedModulesId.clear();
-
+    connectionsId = 0;
 
     bool ret = true;//safeManager->loadApplication(app->getName());
     if(ret){
@@ -329,7 +329,7 @@ void BuilderWindow::load(bool refresh)
         for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
         {
             Application* application = (*appItr);
-            addApplication(application);
+            addApplication(application,&connectionsId);
         }
 
 
@@ -368,7 +368,7 @@ void BuilderWindow::load(bool refresh)
         }else{
             allModules = manager.getKnowledgeBase()->getSelModules();
         }
-        int id = 0;
+
         for(citr=connections.begin(); citr<connections.end(); citr++){
             Connection baseCon = *citr;
 //            if(baseCon.owner()->getLabel() != mainApplication->getLabel()){
@@ -458,7 +458,7 @@ void BuilderWindow::load(bool refresh)
                 if(source && dest){
 //                    Arrow *arrow =(Arrow*)addConnection(source,dest,id);
 //                    arrow->setConnection(baseCon);
-                    Arrow *arrow =(Arrow*)addConnection(source,dest,id);
+                    Arrow *arrow =(Arrow*)addConnection(source,dest,connectionsId);
                     arrow->setConnection(baseCon);
 
 //                    arrow = new Arrow(source, dest, baseCon,id,!editingMode ? safeManager : &manager,false,editingMode);
@@ -473,7 +473,7 @@ void BuilderWindow::load(bool refresh)
                     //itemsList.append(arrow);
                 }
             }
-            id++;
+            connectionsId++;
         }
     }
 
@@ -699,10 +699,10 @@ BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
     return it;
 }
 
-ApplicationItem* BuilderWindow::addApplication(Application *application)
+ApplicationItem* BuilderWindow::addApplication(Application *application, int *connectionsId)
 {
 
-    ApplicationItem *appItem = new ApplicationItem(application,!editingMode ? safeManager : &manager,&usedModulesId, false,editingMode);
+    ApplicationItem *appItem = new ApplicationItem(application,!editingMode ? safeManager : &manager,&usedModulesId, false,editingMode,connectionsId);
 
     if(!editingMode){
         connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
@@ -755,7 +755,7 @@ void BuilderWindow::onAddedApplication(void *app,QPointF pos)
     iapp.setPrefix(strPrefix.c_str());
     Application* application  = manager.getKnowledgeBase()->addIApplicationToApplication(mainApplication, iapp);
     if(application){
-        addApplication(application);
+        addApplication(application,&connectionsId);
 
     }
     m_modified = true;
@@ -1400,6 +1400,10 @@ void CustomView::contextMenuEvent(QContextMenuEvent *event)
         if(!copiedItems.isEmpty()){
             pasteAction->setEnabled(true);
         }else{
+            pasteAction->setEnabled(false);
+        }
+        if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
+            copyAction->setEnabled(false);
             pasteAction->setEnabled(false);
         }
     }else{

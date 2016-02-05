@@ -7,7 +7,9 @@
 #include <QGraphicsDropShadowEffect>
 #include <QDebug>
 
-ApplicationItem::ApplicationItem(Application* application, Manager *manager,  QList <int> *usedIds,bool isInApp, bool editingMode,
+ApplicationItem::ApplicationItem(Application* application, Manager *manager,  QList <int> *usedIds,bool isInApp,
+                                 bool editingMode,
+                                 int *connectionsId,
                                  BuilderItem *parent) :
     BuilderItem(parent)
 {
@@ -17,6 +19,7 @@ ApplicationItem::ApplicationItem(Application* application, Manager *manager,  QL
     this->application = application;
     this->editingMode = editingMode;
     this->mainAppManager = manager;
+    this->connectionsId = connectionsId;
     index = 0;
     minx = miny = maxw = maxh = -1000;
     this->nestedInApp = isInApp;
@@ -72,7 +75,7 @@ void ApplicationItem::init()
     for(appItr=applications.begin(); appItr!=applications.end(); appItr++)
     {
         Application* application = (*appItr);
-        ApplicationItem *appItem = new ApplicationItem(application,mainAppManager,usedModulesId,true,editingMode,this);
+        ApplicationItem *appItem = new ApplicationItem(application,mainAppManager,usedModulesId,true,editingMode,connectionsId,this);
         QObject::connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),
                          sigHandler,SLOT(onModuleSelected(QGraphicsItem*)));
         QObject::connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),
@@ -124,7 +127,7 @@ void ApplicationItem::init()
     index = (index/900)*100+50;
     CnnIterator citr;
     ModulePContainer allModules = mainAppManager->getKnowledgeBase()->getSelModules();
-    int id = 0;
+    //int id = 0;
     for(citr=connections.begin(); citr<connections.end(); citr++){
         Connection baseCon = *citr;
         //            if(baseCon.owner()->getLabel() != application->getLabel()){
@@ -136,7 +139,7 @@ void ApplicationItem::init()
         BuilderItem *source = NULL;
         BuilderItem *dest = NULL;
         QString inModulePrefix,outModulePrefix;
-        findInputOutputData((*citr), !editingMode ? allModules : modules, input, output);
+        findInputOutputData((*citr), /*!editingMode ?*/ allModules/* : modules*/, input, output);
         if(output){
             source = findModelFromOutput(output);
         }else{
@@ -221,7 +224,7 @@ void ApplicationItem::init()
         }else{
             if(source && dest){
 
-                arrow = new Arrow(source, dest,id,NULL,true,editingMode,this);
+                arrow = new Arrow(source, dest,*connectionsId,NULL,true,editingMode,this);
                 arrow->setConnection(baseCon);
                 QObject::connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),sigHandler,SLOT(onConnectionSelected(QGraphicsItem*)));
                 arrow->setColor(QColor(Qt::red));
@@ -234,7 +237,8 @@ void ApplicationItem::init()
                 //itemsList.append(arrow);
             }
         }
-        id++;
+        *connectionsId += 1;
+        qDebug() << "*connectionsId " << *connectionsId;
     }
 
 
@@ -333,42 +337,61 @@ void ApplicationItem::updateSizes(QGraphicsItem *it,QGraphicsItem *parent)
         //return;
 
     }
-    if(/*it->type() == QGraphicsItem::UserType + ConnectionItemType ||*/
-       it->type() == QGraphicsItem::UserType + ApplicationItemType ){
-
-        if(minx == -1000 || bRect.x() < minx){
-            minx = bRect.x();
-        }
-        if(miny == -1000 || bRect.y() < miny){
-            miny = bRect.y();
-        }
-        if(maxw == -1000 || bRect.width() > maxw){
-            maxw = pos.x() + bRect.width();
-        }
-        if(maxh == -1000 || bRect.height() > maxh){
-            maxh = pos.y() + bRect.height();
-        }
-    }else{
-        QPointF p = mapFromItem(it,QPointF(bRect.x(),bRect.y() + bRect.height()/2));
-        if(minx == -1000 || p.x()  < minx){
-            //minx = pos.x() - bRect.width()/2;
-            minx = p.x();
-        }
-        QPointF pp = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2,bRect.y()));
-        if(miny == -1000 || pp.y()  < miny){
-            miny = pp.y();
-        }
-        QPointF p1 = mapFromItem(it,QPointF(bRect.x() + bRect.width() ,bRect.y() + bRect.height()/2));
-        if(maxw == -1000 ||  p1.x() > maxw){
-           // maxw = pos.x() + bRect.width() /2;
-
-            maxw = p1.x();
-        }
-        QPointF pp1 = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2, bRect.y() + bRect.height()));
-        if(maxh == -1000 || pp1.y()  > maxh){
-            maxh = pp1.y();
-        }
+    QPointF p = mapFromItem(it,QPointF(bRect.x(),bRect.y() + bRect.height()/2));
+    if(minx == -1000 || p.x()  < minx){
+        //minx = pos.x() - bRect.width()/2;
+        minx = p.x();
     }
+    QPointF pp = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2,bRect.y()));
+    if(miny == -1000 || pp.y()  < miny){
+        miny = pp.y();
+    }
+    QPointF p1 = mapFromItem(it,QPointF(bRect.x() + bRect.width() ,bRect.y() + bRect.height()/2));
+    if(maxw == -1000 ||  p1.x() > maxw){
+       // maxw = pos.x() + bRect.width() /2;
+
+        maxw = p1.x();
+    }
+    QPointF pp1 = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2, bRect.y() + bRect.height()));
+    if(maxh == -1000 || pp1.y()  > maxh){
+        maxh = pp1.y();
+    }
+//    if(/*it->type() == QGraphicsItem::UserType + ConnectionItemType ||*/
+//       it->type() == QGraphicsItem::UserType + ApplicationItemType ){
+
+//        if(minx == -1000 || bRect.x() < minx){
+//            minx = bRect.x();
+//        }
+//        if(miny == -1000 || bRect.y() < miny){
+//            miny = bRect.y();
+//        }
+//        if(maxw == -1000 || bRect.width() > maxw){
+//            maxw = pos.x() + bRect.width();
+//        }
+//        if(maxh == -1000 || bRect.height() > maxh){
+//            maxh = pos.y() + bRect.height();
+//        }
+//    }else{
+//        QPointF p = mapFromItem(it,QPointF(bRect.x(),bRect.y() + bRect.height()/2));
+//        if(minx == -1000 || p.x()  < minx){
+//            //minx = pos.x() - bRect.width()/2;
+//            minx = p.x();
+//        }
+//        QPointF pp = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2,bRect.y()));
+//        if(miny == -1000 || pp.y()  < miny){
+//            miny = pp.y();
+//        }
+//        QPointF p1 = mapFromItem(it,QPointF(bRect.x() + bRect.width() ,bRect.y() + bRect.height()/2));
+//        if(maxw == -1000 ||  p1.x() > maxw){
+//           // maxw = pos.x() + bRect.width() /2;
+
+//            maxw = p1.x();
+//        }
+//        QPointF pp1 = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2, bRect.y() + bRect.height()));
+//        if(maxh == -1000 || pp1.y()  > maxh){
+//            maxh = pp1.y();
+//        }
+//    }
 }
 
 void ApplicationItem::updateBoundingRect(QList<QGraphicsItem *> items)

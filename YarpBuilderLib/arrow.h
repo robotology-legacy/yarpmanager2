@@ -134,6 +134,8 @@ public:
     void removeHandle(LineHandle*);
     int getHandleIndex(LineHandle *handle);
     LineHandle *getLineHandle(int index);
+    void updateConnectionFrom(QString from);
+    void updateConnectionTo(QString to);
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;

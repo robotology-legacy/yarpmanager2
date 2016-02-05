@@ -52,7 +52,7 @@ public:
     BuilderItem *addSourcePort(QString name, bool editOnStart = false);
     BuilderItem *addDestinantionPort(QString name, bool editOnStart = false);
     BuilderItem *addConnection(void *startItem , void *endItem, int connectionId);
-    ApplicationItem* addApplication(Application *app);
+    ApplicationItem* addApplication(Application *app, int *connectionsId = 0);
     void setOutputPortAvailable(QString, bool);
     void setInputPortAvailable(QString, bool);
     QString getFileName();
@@ -98,6 +98,7 @@ protected:
     //QList <QGraphicsItem*> itemsList;
     bool editingMode;
     bool m_modified;
+    int connectionsId;
 
     QString editingAppName;
     QString editingAppDescr;
@@ -107,6 +108,8 @@ protected:
     QList <QAction*> modulesAction;
     QList <QAction*> builderActions;
     QList <QAction*> connectionsAction;
+
+
 
 signals:
     void refreshApplication();

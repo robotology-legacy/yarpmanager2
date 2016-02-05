@@ -160,9 +160,6 @@ void Arrow::setConnection(Connection conn)
     update();
 }
 
-
-
-
 void Arrow::updateCarrier(QString carrier)
 {
     if(!editingMode){
@@ -177,6 +174,37 @@ void Arrow::updateCarrier(QString carrier)
     connection = manager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
     sigHandler->modified();
 }
+
+void Arrow::updateConnectionFrom(QString from)
+{
+    if(!editingMode){
+        return;
+    }
+    Application* mainApplication = NULL;
+    mainApplication = manager->getKnowledgeBase()->getApplication();
+    manager->getKnowledgeBase()->removeConnectionFromApplication(mainApplication, connection);
+
+    connection.setFrom(from.toLatin1().data());
+
+    connection = manager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
+    sigHandler->modified();
+}
+
+void Arrow::updateConnectionTo(QString to)
+{
+    if(!editingMode){
+        return;
+    }
+    Application* mainApplication = NULL;
+    mainApplication = manager->getKnowledgeBase()->getApplication();
+    manager->getKnowledgeBase()->removeConnectionFromApplication(mainApplication, connection);
+
+    connection.setTo(to.toLatin1().data());
+
+    connection = manager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
+    sigHandler->modified();
+}
+
 
 void Arrow::updateModel()
 {

@@ -160,6 +160,15 @@ void SourcePortItem::editingFinished()
 
     update();
     updateConnections();
+    updateConnectionsFrom(this->itemName);
+}
+
+void SourcePortItem::updateConnectionsFrom(QString from){
+    foreach (Arrow *arrow, arrows) {
+        if(arrow){
+            arrow->updateConnectionFrom(from);
+        }
+    }
 }
 
 

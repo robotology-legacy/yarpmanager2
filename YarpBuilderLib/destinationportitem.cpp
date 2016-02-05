@@ -152,10 +152,22 @@ void DestinationPortItem::editingFinished()
     geo.setWidth(textWidth);
     lineEditWidget->setGeometry(geo);
     lineEditWidget->setPos(-textWidth/2,-lineEditWidget->geometry().height()/2);
+    signalHandler()->modified();
 
     updateConnections();
+    updateConnectionsTo(this->itemName);
     update();
 }
+
+
+void DestinationPortItem::updateConnectionsTo(QString to){
+    foreach (Arrow *arrow, arrows) {
+        if(arrow){
+            arrow->updateConnectionTo(to);
+        }
+    }
+}
+
 
 
 void DestinationPortItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)

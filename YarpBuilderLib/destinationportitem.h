@@ -30,6 +30,9 @@ public:
     void editingFinished();
 
 private:
+    void updateConnectionsTo(QString to);
+
+private:
     Application *app;
     BuilderItem *parent;
     bool portAvailable;

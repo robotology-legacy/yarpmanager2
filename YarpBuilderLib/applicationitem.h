@@ -6,7 +6,11 @@
 class ApplicationItem : public BuilderItem
 {
 public:
-    ApplicationItem(Application* application, Manager *manager, QList <int> *, bool nestedInApp = false,bool editingMode = false, BuilderItem *parent = NULL);
+    ApplicationItem(Application* application, Manager *manager, QList <int> *,
+                    bool nestedInApp = false,
+                    bool editingMode = false,
+                    int *connectionsId = NULL,
+                    BuilderItem *parent = NULL);
     ~ApplicationItem();
 
     QRectF boundingRect() const;
@@ -32,7 +36,7 @@ private:
 
     BuilderItem* addModule(Module *module, int moduleId);
     qreal minx,miny,maxw,maxh;
-
+    int *connectionsId;
 
 
 
