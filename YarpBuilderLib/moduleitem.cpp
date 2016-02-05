@@ -305,17 +305,23 @@ QPointF ModuleItem::connectionPoint()
     return startIngPoint;
 }
 
+void ModuleItem::updateGraphicModel()
+{
+    GraphicModel modBase;
+    GyPoint p;
+    p.x = pos().x();
+    p.y = pos().y();
+    modBase.points.push_back(p);
+    module->setModelBase(modBase);
+}
+
 void ModuleItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 
     if(moved && editingMode && !nestedInApp){
-        GraphicModel modBase;
-        GyPoint p;
-        p.x = pos().x();
-        p.y = pos().y();
-        modBase.points.push_back(p);
-        module->setModelBase(modBase);
+        //updateGraphicModel();
         signalHandler()->modified();
+        signalHandler()->moved();
     }
     pressed = false;
     moved = false;

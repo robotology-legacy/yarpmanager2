@@ -25,6 +25,7 @@ public:
     void setSelectedConnections(QList<int>selectedIds);
     void setOutputPortAvailable(QString oData, bool available);
     void setInputPortAvailable(QString iData, bool available);
+    void updateGraphicModel();
 
 private:
     void updateBoundingRect(QList<QGraphicsItem *> items);

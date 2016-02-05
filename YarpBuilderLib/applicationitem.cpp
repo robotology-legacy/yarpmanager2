@@ -294,8 +294,7 @@ BuilderItem * ApplicationItem::addModule(Module *module,int moduleId)
     QObject::connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),sigHandler,SLOT(onModuleSelected(QGraphicsItem*)));
     QObject::connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),((BuilderScene*)scene()),SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     QObject::connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),((BuilderScene*)scene()),SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
-    //itemsList.append(it);
-    //scene->addItem(it);
+
     it->setZValue(zValue()+2);
     if(module->getModelBase().points.size()>0){
         it->setPos(module->getModelBase().points[0].x ,
@@ -330,11 +329,7 @@ void ApplicationItem::updateSizes(QGraphicsItem *it,QGraphicsItem *parent)
     QPointF pos = it->pos();
     if(parent && (it->type() == QGraphicsItem::UserType + HandleItemType ||
             it->type() == QGraphicsItem::UserType + ArrowLabelItemType)){
-        qDebug() << "PREV POS " << pos;
         pos = mapFromItem(parent,pos);
-        qDebug() << "MAP  POS " << pos;
-        qDebug() << "****************";
-        //return;
 
     }
     QPointF p = mapFromItem(it,QPointF(bRect.x(),bRect.y() + bRect.height()/2));
@@ -356,49 +351,12 @@ void ApplicationItem::updateSizes(QGraphicsItem *it,QGraphicsItem *parent)
     if(maxh == -1000 || pp1.y()  > maxh){
         maxh = pp1.y();
     }
-//    if(/*it->type() == QGraphicsItem::UserType + ConnectionItemType ||*/
-//       it->type() == QGraphicsItem::UserType + ApplicationItemType ){
 
-//        if(minx == -1000 || bRect.x() < minx){
-//            minx = bRect.x();
-//        }
-//        if(miny == -1000 || bRect.y() < miny){
-//            miny = bRect.y();
-//        }
-//        if(maxw == -1000 || bRect.width() > maxw){
-//            maxw = pos.x() + bRect.width();
-//        }
-//        if(maxh == -1000 || bRect.height() > maxh){
-//            maxh = pos.y() + bRect.height();
-//        }
-//    }else{
-//        QPointF p = mapFromItem(it,QPointF(bRect.x(),bRect.y() + bRect.height()/2));
-//        if(minx == -1000 || p.x()  < minx){
-//            //minx = pos.x() - bRect.width()/2;
-//            minx = p.x();
-//        }
-//        QPointF pp = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2,bRect.y()));
-//        if(miny == -1000 || pp.y()  < miny){
-//            miny = pp.y();
-//        }
-//        QPointF p1 = mapFromItem(it,QPointF(bRect.x() + bRect.width() ,bRect.y() + bRect.height()/2));
-//        if(maxw == -1000 ||  p1.x() > maxw){
-//           // maxw = pos.x() + bRect.width() /2;
-
-//            maxw = p1.x();
-//        }
-//        QPointF pp1 = mapFromItem(it,QPointF(bRect.x() + bRect.width()/2, bRect.y() + bRect.height()));
-//        if(maxh == -1000 || pp1.y()  > maxh){
-//            maxh = pp1.y();
-//        }
-//    }
 }
 
 void ApplicationItem::updateBoundingRect(QList<QGraphicsItem *> items)
 {
 
-    qDebug() << "MOVE EVERYTHING LEFT " << minx;
-    qDebug() << "MOVE EVERYTHING UP   " << miny;
     foreach (QGraphicsItem *it, items) {
 
         if(it->type() == QGraphicsItem::UserType + ArrowLabelItemType ||
@@ -406,77 +364,26 @@ void ApplicationItem::updateBoundingRect(QList<QGraphicsItem *> items)
             continue;
         }
 
-        qDebug() << "MOVE FROM " << it->pos();
         if(minx < 25){
             qreal diff =  25 - minx;
-            //qreal newPos = it->pos().x() + diff;
-            //it->setPos(newPos,it->pos().y());
             it->moveBy(diff,0);
             mainRect.setWidth(maxw + 25 + diff);
         }else{
             qreal diff = minx - 25;
-            //qreal newPos = it->pos().x() - diff;
-            //it->setPos(newPos,it->pos().y());
             it->moveBy(-diff,0);
             mainRect.setWidth(maxw + 25 - diff);
         }
 
         if(miny < 25){
             qreal diff =  25 - miny;
-            //qreal newPos = it->pos().y() + diff;
-            //it->setPos(it->pos().x() ,newPos);
             it->moveBy(0,diff);
             mainRect.setHeight(maxh + 25 + diff);
         }else{
             qreal diff = miny - 25 ;
-//            qreal newPos = it->pos().y() - diff;
-//            it->setPos(it->pos().x() ,newPos);
             it->moveBy(0,-diff);
             mainRect.setHeight(maxh + 25 - diff);
         }
-        qDebug() << "MOVE TO " << it->pos();
     }
-
-//    if(minx < 25){
-//        qreal diff = 25 - minx;
-//        foreach (QGraphicsItem *it, childItems()) {
-//            qreal newPos = it->pos().x() + diff;
-//            it->setPos(newPos,it->pos().y());
-//        }
-//        mainRect.setWidth(maxw + 25 + diff);
-
-//    }else{
-//        qreal diff = minx - 25;
-//        foreach (QGraphicsItem *it, childItems()) {
-
-//            qreal newPos = it->pos().x() - diff;
-//            qDebug() << "OLD POS " << (BuilderItem*)it;
-//            it->setPos(newPos,it->pos().y());
-
-//        }
-//        mainRect.setWidth(maxw + 25 - diff);
-//    }
-
-//    if(miny < 25){
-//        qreal diff = 25 - miny;
-//        foreach (QGraphicsItem *it, childItems()) {
-//            qreal newPos = it->pos().y() + diff;
-//            it->setPos(it->pos().x() ,newPos);
-//        }
-//        mainRect.setHeight(maxh + 25 + diff);
-
-//    }else{
-//        qreal diff = miny - 25;
-//        foreach (QGraphicsItem *it, childItems()) {
-//            qreal newPos = it->pos().y() - diff;
-
-
-//            it->setPos(it->pos().x() ,newPos);
-//            qDebug() << "NEW POS " << (BuilderItem*)it;
-//        }
-//        mainRect.setHeight(maxh + 25 - diff);
-//    }
-
 
     prepareGeometryChange();
     boundingR = QRectF(mainRect);
@@ -635,20 +542,7 @@ void ApplicationItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *o
         painter->setBrush(QBrush(QColor(156,156,255,80)));
     }
     painter->drawPath(path);
-
-
-//    painter->setBrush(QBrush(QColor("yellow")));
-//    painter->drawRect(-4,-4,8,8);
-
-
     painter->restore();
-
-
-
-
-//    qDebug() << "APPLICATION " << application->getName() << "   " << this;
-//    qDebug() << "POS " << childItems().first()->pos();
-//    qDebug() << "************************************";
 
 }
 
@@ -660,14 +554,6 @@ QList<QGraphicsItem *> ApplicationItem::getModulesList()
 void ApplicationItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     moved = true;
-    //    if(pressed){
-    //        foreach (PortItem *port, iPorts) {
-    //            port->updateConnections();
-    //        }
-    //        foreach (PortItem *port, oPorts) {
-    //            port->updateConnections();
-    //        }
-    //    }
     QGraphicsItem::mouseMoveEvent(event);
 }
 
@@ -678,17 +564,24 @@ void ApplicationItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
     sigHandler->applicationSelected(this);
     QGraphicsItem::mousePressEvent(event);
 }
+
+void ApplicationItem::updateGraphicModel()
+{
+    GraphicModel modBase;
+    GyPoint p;
+    p.x = pos().x();
+    p.y = pos().y();
+    modBase.points.push_back(p);
+    application->setModelBase(modBase);
+}
+
 void ApplicationItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 
     if(moved && editingMode && !nestedInApp){
-        GraphicModel modBase;
-        GyPoint p;
-        p.x = pos().x();
-        p.y = pos().y();
-        modBase.points.push_back(p);
-        application->setModelBase(modBase);
+        //updateGraphicModel();
         signalHandler()->modified();
+        signalHandler()->moved();
     }
     pressed = false;
     moved = false;

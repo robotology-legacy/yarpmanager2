@@ -28,7 +28,6 @@ public:
     QPointF connectionPoint();
     int type() const ;
     void setAvailable(bool);
-
     void editingFinished();
 
 private:

@@ -205,12 +205,8 @@ void Arrow::updateConnectionTo(QString to)
     sigHandler->modified();
 }
 
-
-void Arrow::updateModel()
+void Arrow::updateGraphicModel()
 {
-    if(!editingMode || nestedInApp){
-        return;
-    }
     GyPoint startPoint;
     GyPoint endPoint;
     GyPoint labelPoint;
@@ -249,9 +245,19 @@ void Arrow::updateModel()
 
     connection = manager->getKnowledgeBase()->addConnectionToApplication(mainApplication, connection);
 
+}
+
+void Arrow::updateModel()
+{
+    if(!editingMode || nestedInApp){
+        return;
+    }
+
+    updateGraphicModel();
     updatePosition();
 
     sigHandler->modified();
+    signalHandler()->moved();
 }
 
 void Arrow::setConnectionSelected(bool selected)

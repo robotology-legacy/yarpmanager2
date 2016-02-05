@@ -128,9 +128,19 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+
     delete ui;
 }
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    for(int i=0;i<ui->mainTabs->count();i++){
+        if(!onTabClose(i)){
+            event->ignore();
+            break;
+        }
+    }
 
+}
 
 void MainWindow::onWizardError(QString err)
 {
@@ -627,11 +637,11 @@ void MainWindow::onSelectAll()
 /*! \brief Close the tab of index index
     \param index the index of the tab
  */
-void MainWindow::onTabClose(int index)
+bool MainWindow::onTabClose(int index)
 {
     GenericViewWidget *w = (GenericViewWidget*)ui->mainTabs->widget(index);
     if(!w){
-        return;
+        return false;
     }
     if(w->getType() == yarp::manager::APPLICATION){
         ApplicationViewWidget *aw = ((ApplicationViewWidget*)w);
@@ -643,7 +653,7 @@ void MainWindow::onTabClose(int index)
 
         if(aw && aw->isRunning()){
             if( QMessageBox::warning(this,QString("Closing %1").arg(ui->mainTabs->tabText(index)),"You have some running module. After closing the application window you might not be able to recover them. Are you sure?",QMessageBox::Yes,QMessageBox::No) == QMessageBox::No){
-                return;
+                return false;
             }
         }
 
@@ -656,11 +666,11 @@ void MainWindow::onTabClose(int index)
                     onReopenApplication(aw->getAppName(),aw->getFileName());
                 }else{
                     QMessageBox::critical(this,"Error",QString("Error Saving the file"));
-                    return;
+                    return false;
                 }
             }
             if(btn == QMessageBox::Cancel){
-                return;
+                return false;
             }
         }
 
@@ -668,6 +678,7 @@ void MainWindow::onTabClose(int index)
     }
     ui->mainTabs->removeTab(index);
     delete w;
+    return true;
 }
 
 /*! \brief Logs an error message

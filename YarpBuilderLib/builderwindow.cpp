@@ -87,7 +87,7 @@ void BuilderWindow::init()
     m_modified = false;
     modified(false);
 
-    onRestoreZoom();
+    //onRestoreZoom();
 
 }
 
@@ -158,6 +158,7 @@ BuilderWindow::~BuilderWindow()
             disconnect(bItem->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
             disconnect(bItem->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
             disconnect(bItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+            disconnect(bItem->signalHandler(),SIGNAL(moved()),this,SLOT(onMoved()));
         }
         if(it->type() == QGraphicsItem::UserType + (int)ApplicationItemType){
             BuilderItem *bItem  = (BuilderItem*)it;
@@ -165,6 +166,7 @@ BuilderWindow::~BuilderWindow()
             disconnect(bItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
             disconnect(bItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
             disconnect(bItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+            disconnect(bItem->signalHandler(),SIGNAL(moved()),this,SLOT(onMoved()));
         }
     }
     view->close();
@@ -477,12 +479,35 @@ void BuilderWindow::load(bool refresh)
         }
     }
 
-    if(!refresh){
-        QRectF rr = scene->itemsBoundingRect();
-        view->fitInView(rr,Qt::KeepAspectRatio);
+    QRectF rr = itemsBoundingRect();
+    view->fitInView(rr,Qt::KeepAspectRatio);
+
+
+}
+
+QRectF BuilderWindow::itemsBoundingRect()
+{
+    QRectF rr;
+    foreach(QGraphicsItem *it, scene->items()){
+        if(it->parentItem() != NULL && it->parentItem()->type() != QGraphicsItem::UserType + ConnectionItemType){
+            continue;
+        }
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType ||
+                it->type() == QGraphicsItem::UserType + ApplicationItemType ||
+                it->type() == QGraphicsItem::UserType + SourcePortItemType ||
+                it->type() == QGraphicsItem::UserType + DestinationPortItemType){
+            QRectF bRect = it->mapToScene(it->boundingRect()).boundingRect();
+            rr = rr.united(bRect);
+        }
+
+        if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
+            Arrow *bItem = (Arrow *)it;
+            foreach (LineHandle *i, bItem->handles()) {
+                rr = rr.united(bItem->mapToScene(bItem->mapFromItem(i,i->boundingRect()).boundingRect()).boundingRect());
+            }
+        }
     }
-
-
+    return rr;
 }
 
 BuilderItem *BuilderWindow::onAddSourcePort(QString name,QPointF pos)
@@ -624,6 +649,7 @@ BuilderItem * BuilderWindow::addConnection(void *startItem ,void *endItem, int c
    arrow->setActions(connectionsAction);
    connect(arrow->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
    connect(arrow->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+   connect(arrow->signalHandler(),SIGNAL(moved()),this,SLOT(onMoved()));
    arrow->setColor(QColor(Qt::red));
    ((BuilderItem*)startItem)->addArrow(arrow);
    ((BuilderItem*)endItem)->addArrow(arrow);
@@ -652,6 +678,35 @@ BuilderItem * BuilderWindow::addDestinantionPort(QString name, bool editOnStart)
 
     scene->addItem(destPort);
     return destPort;
+}
+
+void BuilderWindow::onMoved()
+{
+    foreach(QGraphicsItem *it, scene->selectedItems()){
+        if(it->parentItem() != NULL && it->parentItem()->type() != QGraphicsItem::UserType + ConnectionItemType){
+            continue;
+        }
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *bItem = (ModuleItem *)it;
+            bItem->updateGraphicModel();
+        }
+        if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+            ApplicationItem *bItem = (ApplicationItem *)it;
+            bItem->updateGraphicModel();
+        }
+        if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
+            Arrow *bItem = (Arrow *)it;
+            bItem->updateGraphicModel();
+        }
+        if(it->type() == QGraphicsItem::UserType + HandleItemType){
+            Arrow *bItem = (Arrow *)it->parentItem();
+            bItem->updateGraphicModel();
+        }
+        if(it->type() == QGraphicsItem::UserType + ArrowLabelItemType){
+            Arrow *bItem = (Arrow *)it->parentItem();
+            bItem->updateGraphicModel();
+        }
+    }
 }
 
 void BuilderWindow::onModified()
@@ -685,6 +740,7 @@ BuilderItem * BuilderWindow::addModule(Module *module,int moduleId)
     connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),scene,SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));
     connect(it->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+    connect(it->signalHandler(),SIGNAL(moved()),this,SLOT(onMoved()));
     //itemsList.append(it);
     scene->addItem(it);
     it->setZValue(2);
@@ -709,6 +765,7 @@ ApplicationItem* BuilderWindow::addApplication(Application *application, int *co
         connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
     }else{
         connect(appItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
+        connect(appItem->signalHandler(),SIGNAL(moved()),this,SLOT(onMoved()));
     }
 
     connect(appItem->signalHandler(),SIGNAL(applicationSelected(QGraphicsItem*)),this,SLOT(onApplicationSelected(QGraphicsItem*)));
@@ -1008,7 +1065,7 @@ void BuilderWindow::initModuleTab(ModuleItem *it)
 void BuilderWindow::onRestoreZoom()
 {
     //view->resetMatrix();
-    QRectF rr = scene->itemsBoundingRect();
+    QRectF rr = itemsBoundingRect();
     view->fitInView(rr,Qt::KeepAspectRatio);
 }
 
@@ -1303,27 +1360,12 @@ void CustomView::keyPressEvent(QKeyEvent *event){
 
 void CustomView::mouseReleaseEvent(QMouseEvent* event)
 {
-    qDebug() << "RELEASE ";
-    foreach (QGraphicsItem *it, scene()->selectedItems()) {
-        qDebug() << "TYPE " << it->type();
-        qDebug() << it;
-        qDebug() << "***************************";
-    }
-    qDebug() << "################################\n\n";
 
     QGraphicsView::mouseReleaseEvent(event);
 }
 
 void CustomView::mousePressEvent(QMouseEvent* event)
 {
-    qDebug() << "PRESS";
-    foreach (QGraphicsItem *it, scene()->selectedItems()) {
-        qDebug() << "TYPE " << it->type();
-        qDebug() << it;
-        qDebug() << "***************************";
-    }
-    qDebug() << "################################\n\n";
-
 
     if(event->button()==Qt::LeftButton){
         if(event->modifiers()==Qt::ControlModifier){

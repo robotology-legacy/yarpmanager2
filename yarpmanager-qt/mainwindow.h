@@ -57,6 +57,9 @@ private:
 
     string ext_editor;
 
+protected:
+    void closeEvent(QCloseEvent *);
+
 
 private slots:
     void onSave();
@@ -74,7 +77,7 @@ private slots:
     void onDisconnect();
     void onRefresh();
     void onSelectAll();
-    void onTabClose(int);
+    bool onTabClose(int);
     void onLogError(QString);
     void onLogWarning(QString);
     void onLogMessage(QString);

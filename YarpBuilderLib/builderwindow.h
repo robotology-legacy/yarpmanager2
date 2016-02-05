@@ -65,6 +65,7 @@ public:
     void addModulesAction(QAction*);
     void addAction(QAction*);
     void addConnectionsAction(QAction*);
+    QRectF itemsBoundingRect();
 
 private:
     void prepareManagerFrom(Manager* lazy,
@@ -118,6 +119,7 @@ signals:
     void modified(bool);
 
 private slots:
+    void onMoved();
     void onModified();
     void onZoomIn();
     void onZoomOut();
@@ -172,6 +174,7 @@ private:
     bool mousepressed;
     QRubberBand *rubberBand;
     QList <QGraphicsItem*>copiedItems;
+
 signals:
     void pressedNullItem();
     void addSourcePort(QString,QPointF pos);

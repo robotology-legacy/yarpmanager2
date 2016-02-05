@@ -29,6 +29,7 @@ signals:
     void connectctionSelected(QGraphicsItem *it);
     void applicationSelected(QGraphicsItem *it);
     void modified();
+    void moved();
 
 public slots:
     void onConnectionSelected(QGraphicsItem *it);

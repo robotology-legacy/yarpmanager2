@@ -136,6 +136,7 @@ public:
     LineHandle *getLineHandle(int index);
     void updateConnectionFrom(QString from);
     void updateConnectionTo(QString to);
+    void updateGraphicModel();
 
 protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = 0) Q_DECL_OVERRIDE;

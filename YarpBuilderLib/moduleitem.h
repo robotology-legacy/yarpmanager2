@@ -38,7 +38,7 @@ public:
     void setRunning(bool);
     void setModuleSelected(bool selected);
     int type() const ;
-
+    void updateGraphicModel();
 
 
     Module *getInnerModule();
