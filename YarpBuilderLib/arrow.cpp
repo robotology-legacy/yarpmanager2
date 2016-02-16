@@ -51,6 +51,8 @@
 #include <QStyleOptionGraphicsItem>
 #include <QDebug>
 
+#define AUTOSNIPE_MARGINE 5
+
 const qreal Pi = 3.14;
 
 
@@ -67,10 +69,7 @@ Arrow::Arrow(BuilderItem *startItem, BuilderItem *endItem,int id, Manager *safeM
     this->manager = safeManager;
     setFlag(ItemIsSelectable,true);
     setFlag(ItemClipsToShape,false);
-    //setFlag(ItemSendsGeometryChanges,true);
-    //setFlag(ItemIsMovable,true);
     myColor = Qt::black;
-    //this->textLbl = NULL;
     this->id = id;
     this->nestedInApp = isInApp;
     this->editingMode = editingMode;
@@ -95,19 +94,7 @@ Arrow::~Arrow()
     setToolTip("");
     startItem()->removeArrow(this);
     endItem()->removeArrow(this);
-
-//    while(!handleList.isEmpty()) {
-//        //scene()->removeItem(handle);
-//        delete handleList.takeFirst();
-//    }
-
     handleList.clear();
-//    if(textLbl && !textLbl.parentItem()){
-//        //scene()->removeItem(textLbl);
-//        delete textLbl;
-//    }
-
-    //scene()->removeItem(this);
 
     if(editingMode && manager){
         Application* mainApplication = manager->getKnowledgeBase()->getApplication();
@@ -332,24 +319,12 @@ void Arrow::updatePosition()
         boundingPolyline.append( mapFromItem(myEndItem,myEndItem->connectionPoint()));
     }
     update();
-//    hide();
-//    show();
-
 }
 
 void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
           QWidget *)
 {
-//    if (myStartItem->collidesWithItem(myEndItem))
-//        return;
-
-    //painter->setClipRect( option->exposedRect );
-
     qreal arrowSize = 10;
-//    painter->setBrush(QBrush(QColor("yellow")));
-//    painter->drawRect(boundingRect());
-//    painter->setBrush(QBrush(QColor("blue")));
-//    painter->drawRect(-4,-4,8,8);
 
     /************** Polyline *********************/
     startP = mapFromItem(myStartItem,myStartItem->connectionPoint());
@@ -413,8 +388,6 @@ void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 
     if(!textLbl.hasBeenMoved()){
         QPointF centerP = QPointF((p1.x() + p2.x())/2 - textWidth/2,((p1.y() + p2.y())/2) - 5);
-        //scene()->addItem(this->textLbl);
-        //textLbl.setPos(0,0);
         textLbl.setPos(centerP);
 
 
@@ -427,7 +400,6 @@ void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 void Arrow::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
-    //setZValue(zValue() + 10);
     if(editingMode && !nestedInApp){
         setFlag(ItemIsMovable,true);
     }
@@ -440,7 +412,6 @@ void Arrow::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 
     pressed = false;
-    //setZValue(zValue() - 10);
     if(editingMode && !nestedInApp){
         setFlag(ItemIsMovable,false);
     }
@@ -509,14 +480,8 @@ QVariant Arrow::itemChange(GraphicsItemChange change, const QVariant &value)
         if(pressed){
             setFlag(ItemIsMovable,false);
         }
-//        if(snap){
-//            QPointF newPos = value.toPointF();
-//            QPointF closestPoint = computeTopLeftGridPoint(newPos);
-//            return closestPoint+=offset;
-//        }
     }
     if (change == QGraphicsItem::ItemSelectedHasChanged) {
-        //bool selected = value.toBool();
         if(!externalSelection){
             sigHandler->connectctionSelected(this);
         }
@@ -603,10 +568,8 @@ void LineHandle::mousePressEvent(QGraphicsSceneMouseEvent *event)
                     pos().y() + rect().y() - 2 ,
                     rect().width() + 4,
                     rect().height()+4);
-    //qDebug() << newPath;
 
     scene()->setSelectionArea(newPath);
-    //parent->setSelected(true);
     parent->update();
     QGraphicsRectItem::mousePressEvent(event);
 }
@@ -621,11 +584,7 @@ void LineHandle::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
             ctrlPressed = false;
         }
 
-        //parent->setFlag(QGraphicsItem::ItemIsMovable,false);
         parent->updatePosition();
-
-//        qDebug() << "CENTER MOVED" << rect().center();
-//        qDebug() << "rect " << this->x();
     }
 
     QGraphicsRectItem::mouseMoveEvent(event);
@@ -635,17 +594,6 @@ void LineHandle::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = false;
     ctrlPressed = false;
-
-
-//    QPainterPath newPath;
-//    newPath.addRect(pos().x() + rect().x() - 2,
-//                    pos().y() + rect().y() - 2 ,
-//                    rect().width() + 4,
-//                    rect().height()+4);
-//    //qDebug() << newPath;
-
-//    scene()->setSelectionArea(newPath);
-    //parent->setFlag(QGraphicsItem::ItemIsMovable,true);
     parent->setSelected(true);
     parent->updateModel();
     QGraphicsRectItem::mouseReleaseEvent(event);
@@ -680,13 +628,12 @@ QVariant LineHandle::itemChange(GraphicsItemChange change, const QVariant &value
 
                 dist =  current_point.y() -  base_point.y();
 
-                if(abs(dist) <= /*AUTOSNIPE_MARGINE*/ 5){
-                    //moveBy(0, -dist);
+                if(abs(dist) <= AUTOSNIPE_MARGINE){
                     modified = true;
                     current_point = QPointF(current_point.x(), current_point.y() -dist);
                 }
                 dist =  current_point.x() -  base_point.x();
-                if(abs(dist) <= /*AUTOSNIPE_MARGINE*/5){
+                if(abs(dist) <= AUTOSNIPE_MARGINE){
                     modified = true;
                     //moveBy(-dist, 0);
                     current_point = QPointF(current_point.x()-dist, current_point.y());
@@ -702,12 +649,12 @@ QVariant LineHandle::itemChange(GraphicsItemChange change, const QVariant &value
                     base_point = mapToItem(parent,parent->mapFromItem(parent->endItem(),parent->endItem()->connectionPoint()));
                 }
                 dist =  current_point.y() -  base_point.y();
-                if(abs(dist) <= /*AUTOSNIPE_MARGINE*/ 5){
+                if(abs(dist) <= AUTOSNIPE_MARGINE){
                     modified = true;
                     current_point = QPointF(current_point.x(), current_point.y() -dist);
                 }
                 dist =  current_point.x() -  base_point.x();
-                if(abs(dist) <= /*AUTOSNIPE_MARGINE*/5){
+                if(abs(dist) <= AUTOSNIPE_MARGINE){
                     modified = true;
                     //moveBy(-dist, 0);
                     current_point = QPointF(current_point.x()-dist, current_point.y());
@@ -774,11 +721,6 @@ Label::Label(QString label, QGraphicsItem *parent) : QGraphicsTextItem(label,par
     offset = QPointF(0,0);
 
     setText(label);
-
-
-//    if(parent->parentItem() == NULL){
-//        scene()->addItem(this);
-//    }
 
     parentArrow->update();
 
@@ -863,8 +805,6 @@ QVariant Label::itemChange(GraphicsItemChange change, const QVariant &value)
 {
 
     if (change == QGraphicsItem::ItemPositionChange) {
-
-
         if(parentArrow->snap && hasMoved){
             QPointF newPos = value.toPointF();
                 QPointF closestPoint = computeTopLeftGridPoint(newPos);
@@ -892,27 +832,3 @@ QPointF Label::computeTopLeftGridPoint(const QPointF &pointP){
     qreal yV = gridSize/2 + floor(pointP.y()/gridSize)*gridSize;
     return QPointF(xV, yV);
 }
-
-//void Label::paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget)
-//{
-//    if(!isSelected()){
-//        comboWidget->setVisible(false);
-//    }else{
-//        comboWidget->setVisible(true);
-//    }
-//    QGraphicsTextItem::paint(painter,option,widget);
-//}
-
-//QPointF Label::connectionPoint()
-//{
-//    QPointF startIngPoint;
-
-//    return startIngPoint;
-//}
-
-//QRectF Label::boundingRect() const
-//{
-//    //QRectF br = QRectF(boundingR.x() - BORDERWIDTH, boundingR.y() - BORDERWIDTH , boundingR.width() + (2*BORDERWIDTH), boundingR.height() + (2*BORDERWIDTH));
-//    //qDebug() << br;
-//    return boundingR;
-//}

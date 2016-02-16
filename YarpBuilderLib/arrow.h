@@ -60,7 +60,6 @@ class QGraphicsSceneMouseEvent;
 class QPainterPath;
 QT_END_NAMESPACE
 
-//class BuilderItem;
 class LineHandle;
 class Label : public QGraphicsTextItem
 {
@@ -68,8 +67,6 @@ public:
     Label(QString label, QGraphicsItem *parent = 0);
     ~Label();
     int type() const  { return UserType + (int)ArrowLabelItemType; }
-//    QRectF boundingRect() const;
-//    QPointF connectionPoint();
     bool hasBeenMoved();
     void setHasMoved(bool);
     void currentComboTextChanged(QString text);
@@ -77,7 +74,6 @@ public:
     void setText(QString);
 
 protected:
-    //void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
     void mousePressEvent(QGraphicsSceneMouseEvent *event);
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event);
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
@@ -104,24 +100,23 @@ public:
     friend class LineHandle;
     friend class Label;
 
-//    Arrow(BuilderItem *startItem, BuilderItem *endItem, Manager *safeManager, bool isInApp = false,
-//          bool editingMode = false,BuilderItem *parent = 0);
     Arrow(BuilderItem *startItem, BuilderItem *endItem,
           int id, Manager *safeManager, bool nestedInApp = false, bool editingMode = false, BuilderItem *parent = 0);
+
+    ~Arrow();
+    int type() const  { return (int)QGraphicsItem::UserType + (int)itemType; }
+
     QPointF connectionPoint();
     void setConnected(bool);
     int getId();
     QString getFrom();
     QString getTo();
-    //void removeConnectionFromApp();
     void setConnection(Connection conn);
     void setConnectionSelected(bool selected);
-    //void updateConnection(bool init = false);
     void updateModel();
     void updateCarrier(QString carrier);
     GraphicModel* getModel();
-    ~Arrow();
-    int type() const  { return (int)QGraphicsItem::UserType + (int)itemType; }
+
     QRectF boundingRect() const Q_DECL_OVERRIDE;
     QPainterPath shape() const Q_DECL_OVERRIDE;
     void setColor(const QColor &color) { myColor = color; }
