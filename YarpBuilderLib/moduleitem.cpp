@@ -201,21 +201,34 @@ void ModuleItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option
     if(module->outputCount() <= 1){
         partialH = (qreal)mainRect.height()/(qreal)((qreal)module->outputCount() + 1.0);
         for(int i=0; i < module->outputCount(); i++){
+            PortItem *it = oPorts.at(i);
             painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
 
-            painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + ((i+1) * partialH )),
-                              QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + ((i+1) * partialH )));
-            PortItem *it = oPorts.at(i);
+            if(it->outData->getPortType() == SERVICE_PORT){
+                painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + ((i+1) * partialH )),
+                                  QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH/2 - BORDERWIDTH/2 , mainRect.y() + ((i+1) * partialH )));
+            }else{
+                painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + ((i+1) * partialH )),
+                                  QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + ((i+1) * partialH )));
+            }
+
             it->setPos(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH,mainRect.y() + ((i+1) * partialH ));
         }
     }else{
         partialH = PORT_LINE_WIDTH;
         for(int i=0; i < module->outputCount(); i++){
+            PortItem *it = oPorts.at(i);
+
             painter->setPen(QPen(QBrush(QColor(Qt::black)),BORDERWIDTH));
 
-            painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + (partialH )),
-                              QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + (partialH )));
-            PortItem *it = oPorts.at(i);
+            if(it->outData->getPortType() == SERVICE_PORT){
+                painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + (partialH )),
+                                  QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH/2 - BORDERWIDTH/2 , mainRect.y() + (partialH )));
+            }else{
+                painter->drawLine(QPointF(mainRect.x() + mainRect.width() , mainRect.y() + (partialH )),
+                                  QPointF(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH , mainRect.y() + (partialH )));
+            }
+
             it->setPos(mainRect.x() + mainRect.width() + PORT_LINE_WIDTH,mainRect.y() + (partialH ));
             partialH += 2 * PORT_LINE_WIDTH;
         }
@@ -404,54 +417,67 @@ void ModuleItem::portMoved(PortItem *port,QGraphicsSceneMouseEvent *e)
 /********************************************************************************************************************/
 /********************************************************************************************************************/
 
-PortItem::PortItem(QString portName, int type, BuilderItem *parent) : BuilderItem(parent)
-{
-    triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
-    portAvailable = unknown;
+//PortItem::PortItem(QString portName, int type, BuilderItem *parent) : BuilderItem(parent)
+//{
+//    triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
+//    portAvailable = unknown;
 
-    polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
+//    polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
 
-    setAcceptHoverEvents(true);
-    setFlag(ItemSendsGeometryChanges,true);
-    setFlag(ItemIsSelectable,true);
+//    setAcceptHoverEvents(true);
+//    setFlag(ItemSendsGeometryChanges,true);
+//    setFlag(ItemIsSelectable,true);
 
-    boundingR = QRectF(-triangleH/2, - PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+//    boundingR = QRectF(-triangleH/2, - PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
 
 
-    this->itemName = portName;
-    setToolTip(itemName);
-    this->parent = parent;
-    this->nestedInApp = parent->nestedInApp;
-    portType = type;
+//    this->itemName = portName;
+//    setToolTip(itemName);
+//    this->parent = parent;
+//    this->nestedInApp = parent->nestedInApp;
+//    portType = type;
 
-    sigHandler = NULL;
-    pressed = false;
-    moved = false;
-    hovered =false;
-    if(type == INPUT_PORT){
-        allowInputs = true;
-        allowOutputs = false;
-    }
-    if(type == OUTPUT_PORT){
-        allowInputs = false;
-        allowOutputs = true;
-    }
+//    sigHandler = NULL;
+//    pressed = false;
+//    moved = false;
+//    hovered =false;
+//    if(type == INPUT_PORT){
+//        allowInputs = true;
+//        allowOutputs = false;
+//    }
+//    if(type == OUTPUT_PORT){
+//        allowInputs = false;
+//        allowOutputs = true;
+//    }
 
-    itemType = ModulePortItemType;
-}
+//    itemType = ModulePortItemType;
+//}
 PortItem::PortItem(InputData *node, BuilderItem *parent) : BuilderItem(parent)
 {
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
     inData = node;
     portAvailable = unknown;
 
-    polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
-
     setAcceptHoverEvents(true);
     setFlag(ItemSendsGeometryChanges,true);
     setFlag(ItemIsSelectable,true);
 
-    boundingR = QRectF(-triangleH/2, - PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+    switch (node->getPortType()) {
+    case STREAM_PORT:
+        polygon << QPointF(-triangleH/2, -PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
+        boundingR = QRectF(-triangleH/2, -PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+        break;
+    case EVENT_PORT:
+        polygon << QPointF(-triangleH/2, -PORT_LINE_WIDTH/2) << QPointF(0,0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2) <<
+                   QPointF(triangleH/2, PORT_LINE_WIDTH/2) << QPointF(triangleH/2, -PORT_LINE_WIDTH/2);
+        boundingR = QRectF(-triangleH/2, -PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+        break;
+    case SERVICE_PORT:
+        boundingR = QRectF(-triangleH/2, -PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+        break;
+    default:
+        break;
+    }
 
     this->itemName = node->getPort();
     setToolTip(itemName);
@@ -479,13 +505,27 @@ PortItem::PortItem(OutputData* node, BuilderItem *parent) : BuilderItem(parent)
     triangleH = (PORT_LINE_WIDTH/2)* sqrt(3.0);
     outData = node;
     portAvailable = unknown;
-    polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
-
     setAcceptHoverEvents(true);
     setFlag(ItemSendsGeometryChanges,true);
     setFlag(ItemIsSelectable,true);
 
-    boundingR = QRectF(-triangleH/2, - PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+    switch (node->getPortType()) {
+        case STREAM_PORT:
+            polygon << QPointF(-triangleH/2, - PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2);
+            boundingR = QRectF(-triangleH/2, - PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+            break;
+        case EVENT_PORT:
+            polygon << QPointF(-triangleH/2, -PORT_LINE_WIDTH/2) << QPointF(-triangleH/2, PORT_LINE_WIDTH/2) <<
+                       QPointF(0, PORT_LINE_WIDTH/2) << QPointF(triangleH/2, 0) << QPointF(0, -PORT_LINE_WIDTH/2);
+            boundingR = QRectF(-triangleH/2, -PORT_LINE_WIDTH/2,triangleH,PORT_LINE_WIDTH);
+        case SERVICE_PORT:
+        boundingR = QRectF(-PORT_LINE_WIDTH/2, -PORT_LINE_WIDTH/2,PORT_LINE_WIDTH,PORT_LINE_WIDTH);
+            break;
+        default:
+            break;
+    }
+
+
 
     this->itemName = node->getPort();
     setToolTip(itemName);
@@ -538,7 +578,13 @@ void PortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
         break;
     }
 
-    painter->drawPolygon(polygon);
+    if(portType == INPUT_PORT && inData->getPortType() == SERVICE_PORT){
+        painter->drawEllipse(QPoint(0,0),(int)PORT_LINE_WIDTH/2,(int)PORT_LINE_WIDTH/2);
+    } if(portType == OUTPUT_PORT && outData->getPortType() == SERVICE_PORT){
+        painter->drawArc(boundingR,-90 * 16, -180 * 16);
+    }else{
+        painter->drawPolygon(polygon);
+    }
 }
 
 void PortItem::hoverEnterEvent(QGraphicsSceneHoverEvent * event)
@@ -595,10 +641,29 @@ QPointF PortItem::connectionPoint()
 {
     switch (portType) {
     case INPUT_PORT:
-        return QPointF(-triangleH/2, - 0);
+
+        switch (inData->getPortType()) {
+        case SERVICE_PORT:
+            return QPointF(-PORT_LINE_WIDTH/2,0);
+            break;
+        case EVENT_PORT:
+            return QPointF(0,0);
+            break;
+        default:
+            return QPointF(-triangleH/2, - 0);
+        }
+
     case OUTPUT_PORT:
-        return QPointF(triangleH/2, - 0);
+        switch (outData->getPortType()) {
+        case SERVICE_PORT:
+            return QPointF(-PORT_LINE_WIDTH/2,0);
+            break;
+        default:
+            return QPointF(triangleH/2, - 0);
+        }
+
     }
+    return QPointF(0,0);
 }
 
 int PortItem::getPortType()

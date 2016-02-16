@@ -400,7 +400,7 @@ void Arrow::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
 void Arrow::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     pressed = true;
-    if(editingMode && !nestedInApp){
+    if(!nestedInApp){
         setFlag(ItemIsMovable,true);
     }
     BuilderItem::mousePressEvent(event);
@@ -412,7 +412,7 @@ void Arrow::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
 
     pressed = false;
-    if(editingMode && !nestedInApp){
+    if(!nestedInApp){
         setFlag(ItemIsMovable,false);
     }
     BuilderItem::mouseReleaseEvent(event);
@@ -421,7 +421,7 @@ void Arrow::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
 
     moved = true;
-    if(editingMode && !nestedInApp){
+    if(!nestedInApp){
         setFlag(ItemIsMovable,false);
     }
     BuilderItem::mouseMoveEvent(event);

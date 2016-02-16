@@ -113,14 +113,22 @@ ApplicationViewWidget::ApplicationViewWidget(yarp::manager::Application *app,
     connect(builderWidget,SIGNAL(topLevelChanged(bool)),this,SLOT(onBuilderFloatChanged(bool)));
 
     if(!editingMode){
-        builder->addAction(modRunAction);
-        builder->addAction(modStopAction);
-        builder->addAction(modkillAction);
-        builder->addAction(modSeparator);
-        builder->addAction(modRefreshAction);
+        //builder->addAction(modRunAction);
+        //builder->addAction(modStopAction);
+        //builder->addAction(modkillAction);
+        //builder->addAction(modSeparator);
+        //builder->addAction(modRefreshAction);
         builder->addAction(modSelectAllAction);
-        builder->addAction(modAttachAction);
-        builder->addAction(modAssignAction);
+        //builder->addAction(modAttachAction);
+        //builder->addAction(modAssignAction);
+        builder->addAction(modSeparator);
+        //builder->addAction(connConnectAction);
+        //builder->addAction(connDisconnectAction);
+        //builder->addAction(connSeparatorAction);
+        //builder->addAction(connRefreshAction);
+        builder->addAction(connSelectAllAction);
+        //builder->addAction(conn1SeparatorAction);
+
 
         builder->addModulesAction(modRunAction);
         builder->addModulesAction(modStopAction);
@@ -253,6 +261,8 @@ void ApplicationViewWidget::createModulesViewContextMenu()
     connect(modSelectAllAction,SIGNAL(triggered()),this,SLOT(selectAllModule()));
     connect(modAttachAction,SIGNAL(triggered()),this,SLOT(onAttachStdout()));
     connect(modAssignAction,SIGNAL(triggered()),this,SLOT(onAssignHost()));
+
+    onModuleItemSelectionChanged();
 }
 
 /*! \brief Create the context menu for the connections tree. */
@@ -306,6 +316,8 @@ void ApplicationViewWidget::createConnectionsViewContextMenu()
 
     ui->connectionList->setContextMenu(connContex);
 
+    onConnectionItemSelectionChanged();
+
 }
 
 /*! \brief Create the context menu for the resources tree. */
@@ -327,7 +339,7 @@ void ApplicationViewWidget::createResourcesViewContextMenu()
 /*! \brief Called when an item of the connections tree has been selected. */
 void ApplicationViewWidget::onConnectionItemSelectionChanged()
 {
-    if(ui->connectionList->currentItem() == NULL){
+    if(ui->connectionList->selectedItems().isEmpty()){
         connConnectAction->setEnabled(false);
         connDisconnectAction->setEnabled(false);
         connSeparatorAction->setEnabled(false);
@@ -354,7 +366,8 @@ void ApplicationViewWidget::onConnectionItemSelectionChanged()
 /*! \brief Called when an item of the modules tree has been selected. */
 void ApplicationViewWidget::onModuleItemSelectionChanged()
 {
-    if(ui->moduleList->currentItem() == NULL){
+
+    if(ui->moduleList->selectedItems().isEmpty()){
         modRunAction->setEnabled(false);
         modStopAction->setEnabled(false);
         modkillAction->setEnabled(false);
@@ -365,14 +378,26 @@ void ApplicationViewWidget::onModuleItemSelectionChanged()
         modRunAction->setEnabled(true);
         modStopAction->setEnabled(true);
         modkillAction->setEnabled(true);
-        if (ui->moduleList->currentItem()->text(3) == "localhost")
-        {
+
+        bool all = true;
+        foreach (QTreeWidgetItem *it, ui->moduleList->selectedItems()) {
+            if(it->text(3) != "localhost"){
+                 modAttachAction->setEnabled(false);
+                 all = false;
+                 break;
+            }
+        }
+        if(all){
             modAttachAction->setEnabled(true);
         }
-        else
-        {
-            modAttachAction->setEnabled(false);
-        }
+//        if (ui->moduleList->currentItem()->text(3) == "localhost")
+//        {
+//            modAttachAction->setEnabled(true);
+//        }
+//        else
+//        {
+//            modAttachAction->setEnabled(false);
+//        }
         modAssignAction->setEnabled(true);
         modRefreshAction->setEnabled(true);
 
@@ -404,6 +429,8 @@ void ApplicationViewWidget::onModuleItemSelectionChanged()
             builder->setSelectedModules(selectedIds);
         }
     }
+
+
 }
 
 /*! \brief Called when an item of the resources tree has been selected. */
@@ -446,6 +473,7 @@ void ApplicationViewWidget::onRefreshApplication()
 
 void ApplicationViewWidget::onConnectionSelected(QList<int> id)
 {
+    disconnect(ui->connectionList,SIGNAL(itemSelectionChanged()),this,SLOT(onConnectionItemSelectionChanged()));
     for(int i=0;i<ui->connectionList->topLevelItemCount();i++){
         ui->connectionList->topLevelItem(i)->setSelected(false);
     }
@@ -457,10 +485,13 @@ void ApplicationViewWidget::onConnectionSelected(QList<int> id)
         }
 
     }
+    onConnectionItemSelectionChanged();
+    connect(ui->connectionList,SIGNAL(itemSelectionChanged()),this,SLOT(onConnectionItemSelectionChanged()));
 }
 
 void ApplicationViewWidget::onModuleSelected(QList<int> id)
 {
+    disconnect(ui->moduleList,SIGNAL(itemSelectionChanged()),this,SLOT(onModuleItemSelectionChanged()));
     for(int i=0;i<ui->moduleList->topLevelItemCount();i++){
         ui->moduleList->topLevelItem(i)->setSelected(false);
         if(ui->moduleList->topLevelItem(i)->data(0,Qt::UserRole) == APPLICATION ){
@@ -492,6 +523,8 @@ void ApplicationViewWidget::onModuleSelected(QList<int> id)
 
 
     }
+    onModuleItemSelectionChanged();
+    connect(ui->moduleList,SIGNAL(itemSelectionChanged()),this,SLOT(onModuleItemSelectionChanged()));
 }
 
 /*! \brief Refresh the widget. */
@@ -1266,6 +1299,7 @@ void ApplicationViewWidget::selectAllResources()
 */
 void ApplicationViewWidget::selectAllModule(bool check)
 {
+    disconnect(ui->moduleList,SIGNAL(itemSelectionChanged()),this,SLOT(onModuleItemSelectionChanged()));
     for(int i=0;i<ui->moduleList->topLevelItemCount();i++){
         QTreeWidgetItem *it = ui->moduleList->topLevelItem(i);
         if(it->data(0,Qt::UserRole) == APPLICATION){
@@ -1274,6 +1308,69 @@ void ApplicationViewWidget::selectAllModule(bool check)
             it->setSelected(check);
         }
     }
+    if(ui->moduleList->selectedItems().isEmpty()){
+        modRunAction->setEnabled(false);
+        modStopAction->setEnabled(false);
+        modkillAction->setEnabled(false);
+        modAttachAction->setEnabled(false);
+        modAssignAction->setEnabled(false);
+        modRefreshAction->setEnabled(false);
+    }else{
+        modRunAction->setEnabled(true);
+        modStopAction->setEnabled(true);
+        modkillAction->setEnabled(true);
+
+        bool all = true;
+        foreach (QTreeWidgetItem *it, ui->moduleList->selectedItems()) {
+            if(it->text(3) != "localhost"){
+                 modAttachAction->setEnabled(false);
+                 all = false;
+                 break;
+            }
+        }
+        if(all){
+            modAttachAction->setEnabled(true);
+        }
+//        if (ui->moduleList->currentItem()->text(3) == "localhost")
+//        {
+//            modAttachAction->setEnabled(true);
+//        }
+//        else
+//        {
+//            modAttachAction->setEnabled(false);
+//        }
+        modAssignAction->setEnabled(true);
+        modRefreshAction->setEnabled(true);
+
+
+
+
+        QList<int>selectedIds;
+        QList<QTreeWidgetItem*> selectedItems = ui->moduleList->selectedItems();
+        foreach(QTreeWidgetItem *it,selectedItems){
+            if(it->data(0,Qt::UserRole).toInt() == APPLICATION){
+                for(int j=0;j<it->childCount();j++){
+                    QTreeWidgetItem *child = it->child(j);
+                    child->setSelected(true);
+                }
+
+            }
+
+        }
+        selectedItems = ui->moduleList->selectedItems();
+        foreach(QTreeWidgetItem *it,selectedItems){
+            if(it->data(0,Qt::UserRole).toInt() == APPLICATION){
+                continue;
+            }
+            QString id = it->text(1);
+            selectedIds.append(id.toInt());
+        }
+
+        builder->setSelectedModules(selectedIds);
+    }
+
+
+    connect(ui->moduleList,SIGNAL(itemSelectionChanged()),this,SLOT(onModuleItemSelectionChanged()));
 }
 
 void ApplicationViewWidget::selectAllNestedApplicationModule(QTreeWidgetItem *it,bool check)
@@ -1293,10 +1390,34 @@ void ApplicationViewWidget::selectAllNestedApplicationModule(QTreeWidgetItem *it
 */
 void ApplicationViewWidget::selectAllConnections(bool check)
 {
+    disconnect(ui->connectionList,SIGNAL(itemSelectionChanged()),this,SLOT(onConnectionItemSelectionChanged()));
     for(int i=0;i<ui->connectionList->topLevelItemCount();i++){
         QTreeWidgetItem *it = ui->connectionList->topLevelItem(i);
         it->setSelected(check);
     }
+
+    if(ui->connectionList->selectedItems().isEmpty()){
+        connConnectAction->setEnabled(false);
+        connDisconnectAction->setEnabled(false);
+        connSeparatorAction->setEnabled(false);
+        connRefreshAction->setEnabled(false);
+    }else{
+        connConnectAction->setEnabled(true);
+        connDisconnectAction->setEnabled(true);
+        connSeparatorAction->setEnabled(true);
+        connRefreshAction->setEnabled(true);
+    }
+
+    QList<int>selectedIds;
+    QList<QTreeWidgetItem*> selectedItems = ui->connectionList->selectedItems();
+    foreach(QTreeWidgetItem *it,selectedItems){
+        QString id = it->text(1);
+        selectedIds.append(id.toInt());
+    }
+
+    builder->setSelectedConnections(selectedIds);
+    connect(ui->connectionList,SIGNAL(itemSelectionChanged()),this,SLOT(onConnectionItemSelectionChanged()));
+
 }
 
 /*! \brief Select/deselect all resources

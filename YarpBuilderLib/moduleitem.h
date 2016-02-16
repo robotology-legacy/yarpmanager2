@@ -85,7 +85,7 @@ class PortItem : public BuilderItem
 
 public:
     enum PortStatus {unknown,availbale,unavailable} ;
-    PortItem(QString portName, int type, BuilderItem *parent = 0);
+    //PortItem(QString portName, int type, BuilderItem *parent = 0);
     PortItem(InputData*, BuilderItem *parent = 0);
     PortItem(OutputData*, BuilderItem *parent = 0);
     QRectF boundingRect() const;

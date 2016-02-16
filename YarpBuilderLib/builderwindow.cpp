@@ -1296,13 +1296,13 @@ CustomView::CustomView(BuilderWindow *builder,QGraphicsView *parent) : QGraphics
     rubberBand = NULL;
     this->builder = builder;
 
-        QGLWidget *viewport = new QGLWidget(QGLFormat(QGL::SampleBuffers));
-        setViewport(viewport);
+//    QGLWidget *viewport = new QGLWidget(QGLFormat(QGL::SampleBuffers));
+//    setViewport(viewport);
 
     setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
     setDragMode(QGraphicsView::RubberBandDrag);
     setOptimizationFlags(QGraphicsView::DontSavePainterState |QGraphicsView::DontAdjustForAntialiasing);
-    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+    setViewportUpdateMode(/*QGraphicsView::FullViewportUpdate*/QGraphicsView::BoundingRectViewportUpdate);
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
 }

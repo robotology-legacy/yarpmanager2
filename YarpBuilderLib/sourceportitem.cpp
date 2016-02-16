@@ -128,9 +128,10 @@ void SourcePortItem::editingFinished()
 
     for (int i=0;i<scene()->items().count();i++){
         QGraphicsItem *it = scene()->items().at(i);
-        if(it->type() == QGraphicsItem::UserType + SourcePortItemType && it != this){
+       if((it->type() == QGraphicsItem::UserType + DestinationPortItemType || it->type() == QGraphicsItem::UserType + SourcePortItemType) && (it != this)){
             if(((SourcePortItem*)it)->getItemName() == text){
-                ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,0,0);");
+                ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("QLineEdit { background-color: red;}");
+                ((QLineEdit*)lineEditWidget->widget())->setToolTip(tr("Duplicate Entry"));
                 allowOutputs = false;
                 return;
             }
@@ -139,7 +140,8 @@ void SourcePortItem::editingFinished()
 
     allowOutputs = true;
 
-    ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("background-color: rgb(255,255,255);");
+    ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("QLineEdit {background-color: white;}");
+    ((QLineEdit*)lineEditWidget->widget())->setToolTip("");
 
     this->itemName = text;
     lineEditWidget->setVisible(false);
