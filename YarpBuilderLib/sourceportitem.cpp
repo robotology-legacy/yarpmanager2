@@ -12,6 +12,7 @@ SourcePortItem::SourcePortItem(QString itemName, bool isInApp,
     itemType = SourcePortItemType;
     this->itemName = itemName;
     portAvailable = false;
+    errorState = false;
 
     sigHandler = new ItemSignalHandler((QGraphicsItem*)this,SourcePortItemType,NULL);
     pressed = false;
@@ -122,6 +123,11 @@ void SourcePortItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *op
 
 }
 
+bool SourcePortItem::isErrorState()
+{
+    return errorState;
+}
+
 void SourcePortItem::editingFinished()
 {
     QString text = ((QLineEdit*)lineEditWidget->widget())->text();
@@ -133,11 +139,12 @@ void SourcePortItem::editingFinished()
                 ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("QLineEdit { background-color: red;}");
                 ((QLineEdit*)lineEditWidget->widget())->setToolTip(tr("Duplicate Entry"));
                 allowOutputs = false;
+                errorState = true;
                 return;
             }
         }
     }
-
+    errorState = false;
     allowOutputs = true;
 
     ((QLineEdit*)lineEditWidget->widget())->setStyleSheet("QLineEdit {background-color: white;}");

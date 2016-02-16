@@ -100,6 +100,19 @@ bool BuilderWindow::save()
     if(!application)
         return true;
 
+    foreach (QGraphicsItem *it, scene->items()) {
+        if(it->type() == QGraphicsItem::UserType+SourcePortItemType){
+            if(((SourcePortItem*)it)->isErrorState()){
+                return false;
+            }
+        }
+        if(it->type() == QGraphicsItem::UserType+DestinationPortItemType){
+            if(((DestinationPortItem*)it)->isErrorState()){
+                return false;
+            }
+        }
+    }
+
     m_modified = !manager.saveApplication(application->getName());
     modified(m_modified);
     return !m_modified;

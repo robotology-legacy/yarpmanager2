@@ -29,6 +29,7 @@ public:
     int type() const ;
     void setAvailable(bool);
     void editingFinished();
+    bool isErrorState();
 
 private:
     void updateConnectionsFrom(QString from);
@@ -38,6 +39,7 @@ private:
     BuilderItem *parent;
     bool portAvailable;
     QGraphicsProxyWidget *lineEditWidget;
+    bool errorState;
 
 protected:
     void paint(QPainter * painter, const QStyleOptionGraphicsItem * option, QWidget * widget = 0);
