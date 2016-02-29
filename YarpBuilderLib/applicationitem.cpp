@@ -288,9 +288,15 @@ QPointF ApplicationItem::connectionPoint()
     return startIngPoint;
 }
 
+void ApplicationItem::setModulesAction(QList<QAction *> act)
+{
+    modulesAction = act;
+}
+
 BuilderItem * ApplicationItem::addModule(Module *module,int moduleId)
 {
     ModuleItem *it = new ModuleItem(module,moduleId,true,editingMode,mainAppManager,this);
+    it->setActions(modulesAction);
     QObject::connect(it->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),sigHandler,SLOT(onModuleSelected(QGraphicsItem*)));
     QObject::connect(it->signalHandler(),SIGNAL(requestNewConnection(QPointF,QGraphicsItem*)),((BuilderScene*)scene()),SLOT(onNewConnectionRequested(QPointF,QGraphicsItem*)));
     QObject::connect(it->signalHandler(),SIGNAL(addNewConnection(QPointF,QGraphicsItem*)),((BuilderScene*)scene()),SLOT(onNewConnectionAdded(QPointF,QGraphicsItem*)));

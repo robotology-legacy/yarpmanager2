@@ -776,6 +776,7 @@ ApplicationItem* BuilderWindow::addApplication(Application *application, int *co
     if(!editingMode){
         connect(appItem->signalHandler(),SIGNAL(moduleSelected(QGraphicsItem*)),this,SLOT(onModuleSelected(QGraphicsItem*)));
         connect(appItem->signalHandler(),SIGNAL(connectctionSelected(QGraphicsItem*)),this,SLOT(onConnectionSelected(QGraphicsItem*)));
+        appItem->setModulesAction(modulesAction);
     }else{
         connect(appItem->signalHandler(),SIGNAL(modified()),this,SLOT(onModified()));
         connect(appItem->signalHandler(),SIGNAL(moved()),this,SLOT(onMoved()));
@@ -1232,9 +1233,9 @@ PortItem*  BuilderWindow::findModelFromInput(InputData* input,QString modulePref
 void BuilderWindow::setOutputPortAvailable(QString oData, bool available)
 {
     foreach (QGraphicsItem *it, scene->items()) {
-        BuilderItem *item = (BuilderItem *)it;
-        if(item->type() == QGraphicsItem::UserType + ModuleItemType){
-            ModuleItem *mod = (ModuleItem*)item;
+
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)it;
 
             foreach (PortItem *oPort, mod->oPorts) {
                 QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(oPort->outData->getPort());
@@ -1246,12 +1247,12 @@ void BuilderWindow::setOutputPortAvailable(QString oData, bool available)
 
 
         }else
-        if(item->type() == QGraphicsItem::UserType + ApplicationItemType){
-            ApplicationItem *app = (ApplicationItem*)item;
+        if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+            ApplicationItem *app = (ApplicationItem*)it;
             app->setOutputPortAvailable(oData, available);
         }else
-            if(item->type() == QGraphicsItem::UserType + SourcePortItemType){
-                SourcePortItem *source = (SourcePortItem*)item;
+            if(it->type() == QGraphicsItem::UserType + SourcePortItemType){
+                SourcePortItem *source = (SourcePortItem*)it;
 
                 QString strPort = QString("%1").arg(source->getItemName());
                 if(strPort == oData){
@@ -1442,25 +1443,30 @@ void CustomView::contextMenuEvent(QContextMenuEvent *event)
             return;
         }
 
+        if(!((BuilderItem*)it)->isNestedInApp() && it->type() != QGraphicsItem::UserType + ApplicationItemType){
+            copyAction = menu.addAction("Copy");
+            pasteAction = menu.addAction("Paste");
+            deleteAction = menu.addAction("Delete");
 
-        copyAction = menu.addAction("Copy");
-        pasteAction = menu.addAction("Paste");
-        deleteAction = menu.addAction("Delete");
-        menu.addSeparator();
+            menu.addSeparator();
 
-        if(!it){
-            copyAction->setEnabled(false);
-            deleteAction->setEnabled(false);
+            if(!it){
+                copyAction->setEnabled(false);
+                deleteAction->setEnabled(false);
+            }
+            if(!copiedItems.isEmpty()){
+                pasteAction->setEnabled(true);
+            }else{
+                pasteAction->setEnabled(false);
+            }
+            if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
+                copyAction->setEnabled(false);
+                pasteAction->setEnabled(false);
+            }
         }
-        if(!copiedItems.isEmpty()){
-            pasteAction->setEnabled(true);
-        }else{
-            pasteAction->setEnabled(false);
-        }
-        if(it->type() == QGraphicsItem::UserType + ConnectionItemType){
-            copyAction->setEnabled(false);
-            pasteAction->setEnabled(false);
-        }
+
+
+
     }else{
         if(it){
             if(it->type() == QGraphicsItem::UserType + ModuleItemType ||

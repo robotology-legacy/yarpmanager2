@@ -26,6 +26,7 @@ public:
     void setOutputPortAvailable(QString oData, bool available);
     void setInputPortAvailable(QString iData, bool available);
     void updateGraphicModel();
+    void setModulesAction(QList <QAction*> act);
 
 private:
     void updateBoundingRect(QList<QGraphicsItem *> items);
@@ -50,6 +51,7 @@ protected:
 
 
 private:
+    QList <QAction*> modulesAction;
     bool editingMode;
     QList <int> *usedModulesId;
     QFont customFont;
