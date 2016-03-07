@@ -943,10 +943,9 @@ void BuilderWindow::onConnectionSelected(QGraphicsItem *it)
 
     QList<int> selectedModules;
     foreach (QGraphicsItem *item , scene->selectedItems()) {
-        BuilderItem *bItem = (BuilderItem*)item;
 
-        if(bItem->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
-            Arrow *arrow = (Arrow*)bItem;
+        if(item->type() == QGraphicsItem::UserType + (int)ConnectionItemType){
+            Arrow *arrow = (Arrow*)item;
             selectedModules.append(arrow->getId());
         }
     }
@@ -969,10 +968,9 @@ void BuilderWindow::onModuleSelected(QGraphicsItem *it)
 
     QList<int> selectedModules;
     foreach (QGraphicsItem *item , scene->selectedItems()) {
-        BuilderItem *bItem = (BuilderItem*)item;
 
-        if(bItem->type() == QGraphicsItem::UserType + (int)ModuleItemType){
-            ModuleItem *mod = (ModuleItem*)bItem;
+        if(item->type() == QGraphicsItem::UserType + (int)ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)item;
             selectedModules.append(mod->getId());
         }
     }
@@ -1268,9 +1266,8 @@ void BuilderWindow::setInputPortAvailable(QString iData, bool available)
 
 
     foreach (QGraphicsItem *it, scene->items()) {
-        BuilderItem *item = (BuilderItem *)it;
-        if(item->type() == QGraphicsItem::UserType + ModuleItemType){
-            ModuleItem *mod = (ModuleItem*)item;
+        if(it->type() == QGraphicsItem::UserType + ModuleItemType){
+            ModuleItem *mod = (ModuleItem*)it;
 
             foreach (PortItem *iPort, mod->iPorts) {
                 QString strPort = QString("%1%2").arg(mod->getInnerModule()->getPrefix()).arg(iPort->inData->getPort());
@@ -1281,13 +1278,13 @@ void BuilderWindow::setInputPortAvailable(QString iData, bool available)
 
 
         }else
-            if(item->type() == QGraphicsItem::UserType + ApplicationItemType){
-                ApplicationItem *app = (ApplicationItem*)item;
+            if(it->type() == QGraphicsItem::UserType + ApplicationItemType){
+                ApplicationItem *app = (ApplicationItem*)it;
                 app->setInputPortAvailable(iData,available);
             }
             else{
-                if(item->type() == QGraphicsItem::UserType + DestinationPortItemType){
-                    DestinationPortItem *dest = (DestinationPortItem*)item;
+                if(it->type() == QGraphicsItem::UserType + DestinationPortItemType){
+                    DestinationPortItem *dest = (DestinationPortItem*)it;
 
                     QString strPort = QString("%1").arg(dest->getItemName());
                     if(strPort == iData){
